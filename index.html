@@ -4,9 +4,40 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Pump.fun Scanner</title>
+
+  <link rel="stylesheet" href="style.css">
 </head>
+
 <body>
-  <h1>Pump.fun Scanner</h1>
-  <p>Scanner is being prepared...</p>
+
+  <div class="container">
+
+    <h1>🚀 Pump.fun Scanner</h1>
+
+    <p class="subtitle">
+      Fast token analysis
+    </p>
+
+    <div class="card">
+
+      <input
+        id="tokenInput"
+        type="text"
+        placeholder="Paste Pump.fun link or Contract Address"
+        autocomplete="off"
+      >
+
+      <button onclick="scanToken()">
+        🔍 Scan Token
+      </button>
+
+    </div>
+
+    <div id="result"></div>
+
+  </div>
+
+  <script src="app.js"></script>
+
 </body>
 </html>
