@@ -2,7 +2,12 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  >
+
   <title>Pump.fun Scanner</title>
 
   <link rel="stylesheet" href="style.css">
@@ -10,16 +15,32 @@
 
 <body>
 
+  <!-- Animated Background -->
+  <div class="background">
+    <div class="orb orb1"></div>
+    <div class="orb orb2"></div>
+    <div class="orb orb3"></div>
+  </div>
+
   <div class="container">
 
-    <h1>🚀 Pump.fun Scanner</h1>
+    <div class="header">
 
-    <p class="subtitle">
-      Fast token analysis
-    </p>
+      <h1>🚀 Pump.fun Scanner</h1>
+
+      <p class="subtitle">
+        Advanced Solana Token Analysis
+      </p>
+
+    </div>
+
 
     <!-- LOGIN -->
-    <div id="loginBox" class="card">
+
+    <div
+      id="loginBox"
+      class="card glass"
+    >
 
       <h2>🔐 Private Scanner</h2>
 
@@ -34,7 +55,10 @@
         autocomplete="off"
       >
 
-      <button onclick="login()">
+      <button
+        class="login-btn"
+        onclick="login()"
+      >
         🔓 Login
       </button>
 
@@ -42,29 +66,58 @@
 
     </div>
 
+
     <!-- SCANNER -->
-    <div id="scannerBox" style="display:none;">
 
-      <div class="card">
+    <div
+      id="scannerBox"
+      style="display:none;"
+    >
 
-        <input
-          id="tokenInput"
-          type="text"
-          placeholder="Paste Pump.fun link or Contract Address"
-          autocomplete="off"
-        >
+      <div class="card glass scanner-card">
 
-        <button onclick="scanToken()">
-          🔍 Scan Token
-        </button>
+        <div class="input-group">
+
+          <input
+            id="tokenInput"
+            type="text"
+            placeholder="Paste Pump.fun link or Contract Address"
+            autocomplete="off"
+          >
+
+        </div>
+
+
+        <div class="button-group">
+
+          <button
+            class="scan-btn"
+            onclick="scanToken()"
+          >
+            🔍 Scan Token
+          </button>
+
+
+          <button
+            class="clear-btn"
+            onclick="clearScanner()"
+          >
+            ✖ Clear
+          </button>
+
+        </div>
 
       </div>
+
+
+      <!-- RESULT -->
 
       <div id="result"></div>
 
     </div>
 
   </div>
+
 
   <script src="app.js"></script>
 
