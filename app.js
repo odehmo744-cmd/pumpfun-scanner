@@ -3,6 +3,7 @@
 // =========================
 
 async function login() {
+
   const passwordInput =
     document.getElementById("passwordInput");
 
@@ -17,11 +18,13 @@ async function login() {
     passwordInput.value.trim();
 
   if (!password) {
+
     loginResult.innerHTML = `
       <div class="danger">
         Please enter your password.
       </div>
     `;
+
     return;
   }
 
@@ -32,45 +35,64 @@ async function login() {
   `;
 
   try {
-    const response = await fetch("/api/login", {
-      method: "POST",
 
-      headers: {
-        "Content-Type": "application/json"
-      },
+    const response =
+      await fetch(
+        "/api/login",
+        {
+          method: "POST",
 
-      body: JSON.stringify({
-        password
-      })
-    });
+          cache: "no-store",
+
+          headers: {
+            "Content-Type": "application/json",
+            "Cache-Control": "no-cache"
+          },
+
+          body: JSON.stringify({
+            password
+          })
+        }
+      );
 
     let data;
 
     try {
-      data = await response.json();
+
+      data =
+        await response.json();
+
     } catch {
+
       throw new Error(
         "Invalid response from server"
       );
+
     }
 
     if (
       !response.ok ||
       !data.success
     ) {
+
       throw new Error(
         data.error ||
         "Login failed"
       );
+
     }
 
-    // Simple browser session
+    // =========================
+    // SIMPLE BROWSER SESSION
+    // =========================
+
     sessionStorage.setItem(
       "scannerAuthenticated",
       "true"
     );
 
     passwordInput.value = "";
+
     loginResult.innerHTML = "";
 
     showScanner();
@@ -85,7 +107,9 @@ async function login() {
         )}
       </div>
     `;
+
   }
+
 }
 
 
@@ -102,12 +126,19 @@ function showScanner() {
     document.getElementById("scannerBox");
 
   if (loginBox) {
-    loginBox.style.display = "none";
+
+    loginBox.style.display =
+      "none";
+
   }
 
   if (scannerBox) {
-    scannerBox.style.display = "block";
+
+    scannerBox.style.display =
+      "block";
+
   }
+
 }
 
 
@@ -125,8 +156,11 @@ function checkLogin() {
   if (
     authenticated === "true"
   ) {
+
     showScanner();
+
   }
+
 }
 
 
@@ -136,52 +170,70 @@ function checkLogin() {
 
 function extractTokenAddress(input) {
 
-  input = String(input || "").trim();
+  input =
+    String(input || "").trim();
 
   if (!input) {
     return "";
   }
 
-  // If it is already a contract address
+  // Already a contract address
   if (
     !input.includes("http://") &&
     !input.includes("https://")
   ) {
+
     return input;
+
   }
 
-  // Pump.fun link
+  // =========================
+  // PUMP.FUN
+  // =========================
+
   const pumpMatch =
     input.match(
       /pump\.fun\/(?:coin\/)?([^/?#]+)/i
     );
 
   if (pumpMatch) {
+
     return pumpMatch[1];
+
   }
 
-  // Generic URL fallback
+  // =========================
+  // GENERIC URL FALLBACK
+  // =========================
+
   try {
 
-    const url = new URL(input);
+    const url =
+      new URL(input);
 
     const parts =
       url.pathname
         .split("/")
         .filter(Boolean);
 
-    if (parts.length > 0) {
+    if (
+      parts.length > 0
+    ) {
 
       return parts[
         parts.length - 1
       ];
+
     }
 
   } catch {
+
     // Not a valid URL
+
   }
 
   return input;
+
 }
 
 
@@ -202,7 +254,10 @@ async function pasteToken() {
 
   try {
 
-    // Modern clipboard API
+    // =========================
+    // MODERN CLIPBOARD API
+    // =========================
+
     const text =
       await navigator.clipboard.readText();
 
@@ -211,6 +266,7 @@ async function pasteToken() {
       tokenInput.focus();
 
       return;
+
     }
 
     tokenInput.value =
@@ -220,13 +276,14 @@ async function pasteToken() {
 
   } catch (error) {
 
-    // Clipboard permission denied
     alert(
       "Unable to access clipboard. Please paste manually."
     );
 
     tokenInput.focus();
+
   }
+
 }
 
 
@@ -248,18 +305,25 @@ function clearScanner() {
 
   // Clear input
   if (tokenInput) {
+
     tokenInput.value = "";
+
   }
 
   // Clear result
   if (result) {
+
     result.innerHTML = "";
+
   }
 
-  // Return cursor to input
+  // Return cursor
   if (tokenInput) {
+
     tokenInput.focus();
+
   }
+
 }
 
 
@@ -288,13 +352,18 @@ async function scanToken() {
     !tokenInput ||
     !result
   ) {
+
     return;
+
   }
 
   const input =
     tokenInput.value.trim();
 
-  // Empty input
+  // =========================
+  // EMPTY INPUT
+  // =========================
+
   if (!input) {
 
     result.innerHTML = `
@@ -311,10 +380,17 @@ async function scanToken() {
     tokenInput.focus();
 
     return;
+
   }
 
+  // =========================
+  // EXTRACT CONTRACT
+  // =========================
+
   const token =
-    extractTokenAddress(input);
+    extractTokenAddress(
+      input
+    );
 
   if (!token) {
 
@@ -328,18 +404,29 @@ async function scanToken() {
       </div>
     `;
 
+    tokenInput.focus();
+
     return;
+
   }
 
-  // Prevent multiple scans
+  // =========================
+  // DISABLE SCAN BUTTON
+  // =========================
+
   if (scanButton) {
 
-    scanButton.disabled = true;
+    scanButton.disabled =
+      true;
 
     scanButton.innerHTML =
       "⏳ Scanning...";
 
   }
+
+  // =========================
+  // SHOW LOADING
+  // =========================
 
   result.innerHTML = `
     <div class="card result">
@@ -353,7 +440,7 @@ async function scanToken() {
       </h2>
 
       <p>
-        Fetching market data,
+        Fetching LIVE market data,
         trading activity and
         holder information...
       </p>
@@ -363,10 +450,42 @@ async function scanToken() {
 
   try {
 
+    // ==================================================
+    // IMPORTANT
+    // Every scan gets a unique timestamp.
+    //
+    // This prevents browser/CDN cache from returning
+    // the previous result when scanning the SAME token.
+    // ==================================================
+
+    const cacheBuster =
+      Date.now();
+
+    const scanUrl =
+      "/api/scan?token=" +
+      encodeURIComponent(token) +
+      "&_t=" +
+      cacheBuster;
+
     const response =
       await fetch(
-        "/api/scan?token=" +
-        encodeURIComponent(token)
+        scanUrl,
+        {
+          method: "GET",
+
+          cache: "no-store",
+
+          headers: {
+            "Cache-Control":
+              "no-cache, no-store, max-age=0",
+
+            "Pragma":
+              "no-cache",
+
+            "Expires":
+              "0"
+          }
+        }
       );
 
     let data;
@@ -381,7 +500,12 @@ async function scanToken() {
       throw new Error(
         "Invalid response from server"
       );
+
     }
+
+    // =========================
+    // SERVER ERROR
+    // =========================
 
     if (
       !response.ok ||
@@ -392,9 +516,16 @@ async function scanToken() {
         data.error ||
         "Scanner error"
       );
+
     }
 
-    displayScanResult(data);
+    // =========================
+    // DISPLAY NEW RESULT
+    // =========================
+
+    displayScanResult(
+      data
+    );
 
   } catch (error) {
 
@@ -402,16 +533,22 @@ async function scanToken() {
       <div class="card result">
 
         <div class="danger">
+
           ❌ ${escapeHtml(
             error.message ||
             "Scanner error"
           )}
+
         </div>
 
       </div>
     `;
 
   } finally {
+
+    // =========================
+    // ENABLE BUTTON AGAIN
+    // =========================
 
     if (scanButton) {
 
@@ -422,7 +559,9 @@ async function scanToken() {
         "🔍 Scan Token";
 
     }
+
   }
+
 }
 
 
@@ -456,6 +595,10 @@ function displayScanResult(data) {
   const token =
     data.token || {};
 
+  // =========================
+  // BASIC DATA
+  // =========================
+
   const verdict =
     scanner.verdict ||
     "UNKNOWN";
@@ -481,11 +624,31 @@ function displayScanResult(data) {
       "-"
     );
 
+  // =========================
+  // CURRENT TIME
+  // =========================
+
+  const updatedAt =
+    new Date().toLocaleTimeString(
+      "en-US",
+      {
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit"
+      }
+    );
+
+  // =========================
+  // RESULT
+  // =========================
+
   result.innerHTML = `
 
     <div class="card result">
 
-      <!-- TOKEN -->
+      <!-- =================================
+           TOKEN
+      ================================== -->
 
       <div class="small">
         TOKEN
@@ -496,11 +659,17 @@ function displayScanResult(data) {
         (${tokenSymbol})
       </h2>
 
+      <p class="small">
+        🔄 Updated: ${updatedAt}
+      </p>
+
 
       <hr>
 
 
-      <!-- SCANNER RESULT -->
+      <!-- =================================
+           SCANNER RESULT
+      ================================== -->
 
       <div class="small">
         SCANNER RESULT
@@ -519,7 +688,9 @@ function displayScanResult(data) {
       <hr>
 
 
-      <!-- MARKET -->
+      <!-- =================================
+           MARKET
+      ================================== -->
 
       <div class="small">
         MARKET
@@ -561,6 +732,22 @@ function displayScanResult(data) {
       </p>
 
       ${
+        market.volumeLiquidityRatio !==
+        undefined
+          ? `
+            <p>
+              <strong>
+                Volume/Liquidity:
+              </strong>
+              ${formatNumber(
+                market.volumeLiquidityRatio
+              )}x
+            </p>
+          `
+          : ""
+      }
+
+      ${
         market.dataSource
           ? `
             <p class="small">
@@ -577,7 +764,9 @@ function displayScanResult(data) {
       <hr>
 
 
-      <!-- TRADING -->
+      <!-- =================================
+           TRADING
+      ================================== -->
 
       <div class="small">
         TRADING
@@ -615,7 +804,9 @@ function displayScanResult(data) {
       <hr>
 
 
-      <!-- HOLDERS -->
+      <!-- =================================
+           HOLDERS
+      ================================== -->
 
       <div class="small">
         HOLDERS
@@ -653,7 +844,9 @@ function displayScanResult(data) {
       <hr>
 
 
-      <!-- ANALYSIS -->
+      <!-- =================================
+           ANALYSIS
+      ================================== -->
 
       <div class="small">
         ANALYSIS
@@ -667,7 +860,9 @@ function displayScanResult(data) {
       <hr>
 
 
-      <!-- CONTRACT -->
+      <!-- =================================
+           CONTRACT
+      ================================== -->
 
       <div class="small">
         CONTRACT ADDRESS
@@ -684,6 +879,7 @@ function displayScanResult(data) {
     </div>
 
   `;
+
 }
 
 
@@ -691,7 +887,9 @@ function displayScanResult(data) {
 // RENDER ANALYSIS
 // =========================
 
-function renderAnalysis(analysis) {
+function renderAnalysis(
+  analysis
+) {
 
   if (
     !Array.isArray(analysis) ||
@@ -703,6 +901,7 @@ function renderAnalysis(analysis) {
         No analysis available.
       </p>
     `;
+
   }
 
   return analysis
@@ -714,6 +913,7 @@ function renderAnalysis(analysis) {
       `
     )
     .join("");
+
 }
 
 
@@ -721,7 +921,9 @@ function renderAnalysis(analysis) {
 // FORMAT NUMBER
 // =========================
 
-function formatNumber(value) {
+function formatNumber(
+  value
+) {
 
   const number =
     Number(value);
@@ -729,7 +931,9 @@ function formatNumber(value) {
   if (
     !Number.isFinite(number)
   ) {
+
     return "0";
+
   }
 
   return number.toLocaleString(
@@ -738,6 +942,7 @@ function formatNumber(value) {
       maximumFractionDigits: 2
     }
   );
+
 }
 
 
@@ -745,7 +950,9 @@ function formatNumber(value) {
 // FORMAT INTEGER
 // =========================
 
-function formatInteger(value) {
+function formatInteger(
+  value
+) {
 
   const number =
     Number(value);
@@ -753,7 +960,9 @@ function formatInteger(value) {
   if (
     !Number.isFinite(number)
   ) {
+
     return "0";
+
   }
 
   return Math.round(
@@ -761,6 +970,7 @@ function formatInteger(value) {
   ).toLocaleString(
     "en-US"
   );
+
 }
 
 
@@ -768,7 +978,9 @@ function formatInteger(value) {
 // FORMAT PERCENT
 // =========================
 
-function formatPercent(value) {
+function formatPercent(
+  value
+) {
 
   const number =
     Number(value);
@@ -776,7 +988,9 @@ function formatPercent(value) {
   if (
     !Number.isFinite(number)
   ) {
+
     return "0%";
+
   }
 
   return (
@@ -787,6 +1001,7 @@ function formatPercent(value) {
         ""
       ) + "%"
   );
+
 }
 
 
@@ -794,7 +1009,9 @@ function formatPercent(value) {
 // FORMAT PRICE
 // =========================
 
-function formatPrice(value) {
+function formatPrice(
+  value
+) {
 
   const number =
     Number(value);
@@ -803,31 +1020,41 @@ function formatPrice(value) {
     !Number.isFinite(number) ||
     number <= 0
   ) {
+
     return "0";
+
   }
 
   if (
     number < 0.00000001
   ) {
+
     return number.toFixed(14);
+
   }
 
   if (
     number < 0.000001
   ) {
+
     return number.toFixed(12);
+
   }
 
   if (
     number < 0.001
   ) {
+
     return number.toFixed(9);
+
   }
 
   if (
     number < 1
   ) {
+
     return number.toFixed(6);
+
   }
 
   return number.toLocaleString(
@@ -837,6 +1064,7 @@ function formatPrice(value) {
       maximumFractionDigits: 6
     }
   );
+
 }
 
 
@@ -844,7 +1072,9 @@ function formatPrice(value) {
 // ESCAPE HTML
 // =========================
 
-function escapeHtml(value) {
+function escapeHtml(
+  value
+) {
 
   const div =
     document.createElement(
@@ -857,6 +1087,7 @@ function escapeHtml(value) {
     );
 
   return div.innerHTML;
+
 }
 
 
@@ -876,7 +1107,10 @@ function setupKeyboardEvents() {
       "passwordInput"
     );
 
-  // Enter = Login
+  // =========================
+  // ENTER = LOGIN
+  // =========================
+
   if (passwordInput) {
 
     passwordInput.addEventListener(
@@ -890,13 +1124,18 @@ function setupKeyboardEvents() {
           event.preventDefault();
 
           login();
+
         }
 
       }
     );
+
   }
 
-  // Enter = Scan
+  // =========================
+  // ENTER = SCAN
+  // =========================
+
   if (tokenInput) {
 
     tokenInput.addEventListener(
@@ -910,11 +1149,14 @@ function setupKeyboardEvents() {
           event.preventDefault();
 
           scanToken();
+
         }
 
       }
     );
+
   }
+
 }
 
 
