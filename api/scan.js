@@ -9,10 +9,16 @@ export default async function handler(req, res) {
       });
     }
 
-    // -----------------------------
-    // 1. DEX Screener
-    // -----------------------------
+    const heliusKey = process.env.HELIUS_API_KEY;
 
+    if (!heliusKey) {
+      return res.status(500).json({
+        success: false,
+        error: "HELIUS_API_KEY is not configured"
+      });
+    }
+
+    // 1. DEX Screener
     const dexResponse = await fetch(
       "https://api.dexscreener.com/tokens/v1/solana/" +
       encodeURIComponent(token)
@@ -28,78 +34,73 @@ export default async function handler(req, res) {
     const pairs = await dexResponse.json();
     const pair = pairs?.[0] || null;
 
-    // -----------------------------
-    // 2. Solana RPC
-    // -----------------------------
+    // 2. Helius RPC
+    const rpcUrl =
+      "https://mainnet.helius-rpc.com/?api-key=" +
+      encodeURIComponent(heliusKey);
 
-    const rpcResponse = await fetch(
-      "https://api.mainnet-beta.solana.com",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          jsonrpc: "2.0",
-          id: 1,
-          method: "getTokenLargestAccounts",
-          params: [
-            token,
-            {
-              commitment: "confirmed"
-            }
-          ]
-        })
-      }
-    );
-
-    if (!rpcResponse.ok) {
-      return res.status(502).json({
-        success: false,
-        error: "Solana RPC request failed"
-      });
-    }
+    const rpcResponse = await fetch(rpcUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        id: 1,
+        method: "getTokenLargestAccounts",
+        params: [
+          token,
+          {
+            commitment: "confirmed"
+          }
+        ]
+      })
+    });
 
     const rpcData = await rpcResponse.json();
 
-    if (rpcData.error) {
-      return res.status(400).json({
+    if (!rpcResponse.ok || rpcData.error) {
+      return res.status(502).json({
         success: false,
-        error: rpcData.error.message || "Solana RPC error"
+        error:
+          rpcData.error?.message ||
+          "Helius RPC request failed"
       });
     }
 
     const holders = rpcData.result?.value || [];
 
-    // -----------------------------
-    // 3. Holder concentration
-    // -----------------------------
+    // 3. Token supply
+    const supplyResponse = await fetch(rpcUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        id: 2,
+        method: "getTokenSupply",
+        params: [
+          token,
+          {
+            commitment: "confirmed"
+          }
+        ]
+      })
+    });
 
-    const totalSupplyResponse = await fetch(
-      "https://api.mainnet-beta.solana.com",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          jsonrpc: "2.0",
-          id: 2,
-          method: "getTokenSupply",
-          params: [
-            token,
-            {
-              commitment: "confirmed"
-            }
-          ]
-        })
-      }
+    const supplyData = await supplyResponse.json();
+
+    if (supplyData.error) {
+      return res.status(502).json({
+        success: false,
+        error: supplyData.error.message
+      });
+    }
+
+    const supply = Number(
+      supplyData.result?.value?.uiAmount || 0
     );
-
-    const supplyData = await totalSupplyResponse.json();
-
-    const supply =
-      Number(supplyData.result?.value?.uiAmount || 0);
 
     const topHolders = holders.map((holder, index) => {
       const amount = Number(holder.uiAmount || 0);
@@ -115,14 +116,12 @@ export default async function handler(req, res) {
       };
     });
 
-    const top10Percentage = topHolders.reduce(
-      (sum, holder) => sum + (holder.percentage || 0),
-      0
-    );
-
-    // -----------------------------
-    // 4. Return complete data
-    // -----------------------------
+    const top10Percentage = topHolders
+      .slice(0, 10)
+      .reduce(
+        (sum, holder) => sum + (holder.percentage || 0),
+        0
+      );
 
     return res.status(200).json({
       success: true,
@@ -148,7 +147,7 @@ export default async function handler(req, res) {
 
       holders: {
         supply,
-        top10Percentage: Number(top10Percentage.toFixed(2)),
+        top10Percentage,
         accounts: topHolders
       }
     });
