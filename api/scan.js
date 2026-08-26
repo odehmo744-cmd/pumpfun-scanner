@@ -22,13 +22,13 @@ export default async function handler(req, res) {
       "https://mainnet.helius-rpc.com/?api-key=" +
       encodeURIComponent(heliusKey);
 
-    // -----------------------------
-    // 1. DEX Screener
-    // -----------------------------
+    // =====================================================
+    // 1. DEX SCREENER
+    // =====================================================
 
     const dexResponse = await fetch(
       "https://api.dexscreener.com/tokens/v1/solana/" +
-      encodeURIComponent(token)
+        encodeURIComponent(token)
     );
 
     const pairs = dexResponse.ok
@@ -37,9 +37,9 @@ export default async function handler(req, res) {
 
     const pair = pairs?.[0] || null;
 
-    // -----------------------------
-    // 2. Token supply
-    // -----------------------------
+    // =====================================================
+    // 2. TOKEN SUPPLY
+    // =====================================================
 
     const supplyResponse = await fetch(rpcUrl, {
       method: "POST",
@@ -69,9 +69,9 @@ export default async function handler(req, res) {
       supplyData.result?.value?.uiAmount || 0
     );
 
-    // -----------------------------
-    // 3. Largest token accounts
-    // -----------------------------
+    // =====================================================
+    // 3. LARGEST TOKEN ACCOUNTS
+    // =====================================================
 
     const largestResponse = await fetch(rpcUrl, {
       method: "POST",
@@ -104,9 +104,9 @@ export default async function handler(req, res) {
       account => account.address
     );
 
-    // -----------------------------
-    // 4. Get actual owners
-    // -----------------------------
+    // =====================================================
+    // 4. GET OWNERS
+    // =====================================================
 
     let ownerAccounts = [];
 
@@ -140,9 +140,9 @@ export default async function handler(req, res) {
         ownersData.result?.value || [];
     }
 
-    // -----------------------------
-    // 5. Map token accounts → owners
-    // -----------------------------
+    // =====================================================
+    // 5. MAP TOKEN ACCOUNTS -> OWNERS
+    // =====================================================
 
     const holdersMap = new Map();
 
@@ -170,9 +170,9 @@ export default async function handler(req, res) {
       );
     });
 
-    // -----------------------------
-    // 6. Convert to holder list
-    // -----------------------------
+    // =====================================================
+    // 6. HOLDER LIST
+    // =====================================================
 
     const holders = Array.from(
       holdersMap.entries()
@@ -189,9 +189,9 @@ export default async function handler(req, res) {
       }))
       .sort((a, b) => b.amount - a.amount);
 
-    // -----------------------------
-    // 7. Concentration
-    // -----------------------------
+    // =====================================================
+    // 7. HOLDER CONCENTRATION
+    // =====================================================
 
     const top1Percentage =
       holders[0]?.percentage || 0;
@@ -214,9 +214,9 @@ export default async function handler(req, res) {
           0
         );
 
-    // -----------------------------
-    // 8. Trading data
-    // -----------------------------
+    // =====================================================
+    // 8. TRADING DATA
+    // =====================================================
 
     const buys1h =
       pair?.txns?.h1?.buys || 0;
@@ -230,65 +230,357 @@ export default async function handler(req, res) {
     const buyPressure =
       totalTrades > 0
         ? Number(
-            ((buys1h / totalTrades) * 100)
-              .toFixed(2)
+            (
+              (buys1h / totalTrades) *
+              100
+            ).toFixed(2)
           )
         : 0;
 
-    // -----------------------------
-    // 9. Final response
-    // -----------------------------
+    // =====================================================
+    // 9. MARKET DATA
+    // =====================================================
+
+    const liquidity =
+      Number(pair?.liquidity?.usd || 0);
+
+    const volume24h =
+      Number(pair?.volume?.h24 || 0);
+
+    const marketCap =
+      Number(
+        pair?.marketCap ||
+        pair?.fdv ||
+        0
+      );
+
+    const priceChange24h =
+      Number(
+        pair?.priceChange?.h24 || 0
+      );
+
+    // =====================================================
+    // 10. SCORE SYSTEM
+    // =====================================================
+
+    let score = 0;
+
+    const analysis = [];
+
+    // -----------------------------------------------------
+    // LIQUIDITY — 20 POINTS
+    // -----------------------------------------------------
+
+    if (liquidity >= 100000) {
+      score += 20;
+      analysis.push("Strong liquidity");
+    } else if (liquidity >= 50000) {
+      score += 16;
+      analysis.push("Good liquidity");
+    } else if (liquidity >= 20000) {
+      score += 12;
+      analysis.push("Acceptable liquidity");
+    } else if (liquidity >= 10000) {
+      score += 7;
+      analysis.push("Low liquidity");
+    } else {
+      score += 0;
+      analysis.push("⚠️ Very low liquidity");
+    }
+
+    // -----------------------------------------------------
+    // VOLUME / LIQUIDITY — 15 POINTS
+    // -----------------------------------------------------
+
+    const volumeLiquidityRatio =
+      liquidity > 0
+        ? volume24h / liquidity
+        : 0;
+
+    if (
+      volumeLiquidityRatio >= 10 &&
+      volumeLiquidityRatio <= 40
+    ) {
+      score += 15;
+      analysis.push("Very strong volume");
+    } else if (
+      volumeLiquidityRatio >= 5 &&
+      volumeLiquidityRatio < 10
+    ) {
+      score += 12;
+      analysis.push("Strong volume");
+    } else if (
+      volumeLiquidityRatio >= 2 &&
+      volumeLiquidityRatio < 5
+    ) {
+      score += 8;
+      analysis.push("Healthy volume");
+    } else if (volumeLiquidityRatio > 0) {
+      score += 4;
+      analysis.push("⚠️ Low volume");
+    }
+
+    // -----------------------------------------------------
+    // BUY PRESSURE — 15 POINTS
+    // -----------------------------------------------------
+
+    if (buyPressure >= 60) {
+      score += 15;
+      analysis.push("Strong buying pressure");
+    } else if (buyPressure >= 55) {
+      score += 12;
+      analysis.push("Positive buying pressure");
+    } else if (buyPressure >= 48) {
+      score += 9;
+      analysis.push("Buy/sell pressure is balanced");
+    } else if (buyPressure >= 40) {
+      score += 5;
+      analysis.push("⚠️ Selling pressure is stronger");
+    } else {
+      score += 0;
+      analysis.push("🚨 Heavy selling pressure");
+    }
+
+    // -----------------------------------------------------
+    // PRICE MOMENTUM — 10 POINTS
+    // -----------------------------------------------------
+
+    if (
+      priceChange24h >= 20 &&
+      priceChange24h <= 500
+    ) {
+      score += 10;
+      analysis.push("Strong positive momentum");
+    } else if (
+      priceChange24h > 500 &&
+      priceChange24h <= 1500
+    ) {
+      score += 7;
+      analysis.push("⚠️ Very high price increase");
+    } else if (
+      priceChange24h > 1500
+    ) {
+      score += 3;
+      analysis.push(
+        "🚨 Extreme price increase / high risk"
+      );
+    } else if (
+      priceChange24h >= 0
+    ) {
+      score += 6;
+      analysis.push("Positive price trend");
+    } else if (
+      priceChange24h >= -20
+    ) {
+      score += 3;
+      analysis.push("Weak negative momentum");
+    } else {
+      score += 0;
+      analysis.push("🚨 Strong negative momentum");
+    }
+
+    // -----------------------------------------------------
+    // TOP HOLDER — 10 POINTS
+    // -----------------------------------------------------
+
+    if (top1Percentage <= 10) {
+      score += 10;
+      analysis.push("Healthy top holder concentration");
+    } else if (top1Percentage <= 20) {
+      score += 8;
+      analysis.push("Moderate top holder concentration");
+    } else if (top1Percentage <= 30) {
+      score += 5;
+      analysis.push("⚠️ Elevated top holder concentration");
+    } else {
+      score += 0;
+      analysis.push(
+        "🚨 Top holder concentration is very high"
+      );
+    }
+
+    // -----------------------------------------------------
+    // TOP 5 — 10 POINTS
+    // -----------------------------------------------------
+
+    if (top5Percentage <= 30) {
+      score += 10;
+      analysis.push("Healthy top 5 concentration");
+    } else if (top5Percentage <= 50) {
+      score += 7;
+      analysis.push("Moderate top 5 concentration");
+    } else if (top5Percentage <= 65) {
+      score += 3;
+      analysis.push("⚠️ High top 5 concentration");
+    } else {
+      score += 0;
+      analysis.push(
+        "🚨 Top 5 holders control a large supply"
+      );
+    }
+
+    // -----------------------------------------------------
+    // HOLDER COUNT — 10 POINTS
+    // -----------------------------------------------------
+
+    const uniqueOwners =
+      holders.length;
+
+    /*
+      IMPORTANT:
+      getTokenLargestAccounts returns only the
+      largest token accounts, so this is NOT the
+      total number of holders.
+    */
+
+    if (uniqueOwners >= 100) {
+      score += 10;
+      analysis.push("Strong holder distribution");
+    } else if (uniqueOwners >= 50) {
+      score += 8;
+      analysis.push("Good holder distribution");
+    } else if (uniqueOwners >= 20) {
+      score += 5;
+      analysis.push(
+        "Limited holder data"
+      );
+    } else {
+      score += 2;
+      analysis.push(
+        "⚠️ Limited holder data"
+      );
+    }
+
+    // -----------------------------------------------------
+    // MARKET ACTIVITY — 10 POINTS
+    // -----------------------------------------------------
+
+    if (totalTrades >= 2000) {
+      score += 10;
+      analysis.push("Very active trading");
+    } else if (totalTrades >= 1000) {
+      score += 8;
+      analysis.push("Active trading");
+    } else if (totalTrades >= 300) {
+      score += 5;
+      analysis.push("Moderate trading activity");
+    } else if (totalTrades > 0) {
+      score += 2;
+      analysis.push("Low trading activity");
+    }
+
+    // =====================================================
+    // FINAL SCORE LIMIT
+    // =====================================================
+
+    score = Math.max(
+      0,
+      Math.min(100, Math.round(score))
+    );
+
+    // =====================================================
+    // VERDICT
+    // =====================================================
+
+    let verdict;
+
+    if (score >= 75) {
+      verdict = "🟢 BUY / STRONG WATCH";
+    } else if (score >= 55) {
+      verdict = "🟡 WATCH";
+    } else if (score >= 35) {
+      verdict = "🟠 HIGH RISK";
+    } else {
+      verdict = "🔴 AVOID";
+    }
+
+    // =====================================================
+    // FINAL RESPONSE
+    // =====================================================
 
     return res.status(200).json({
       success: true,
 
       token: {
         address: token,
-        name: pair?.baseToken?.name || null,
-        symbol: pair?.baseToken?.symbol || null
+        name:
+          pair?.baseToken?.name ||
+          null,
+        symbol:
+          pair?.baseToken?.symbol ||
+          null
+      },
+
+      scanner: {
+        score,
+        verdict,
+        analysis
       },
 
       market: {
-        priceUsd: pair?.priceUsd || null,
+        priceUsd:
+          pair?.priceUsd ||
+          null,
+
         marketCap:
-          pair?.marketCap ||
-          pair?.fdv ||
+          marketCap ||
           null,
+
         liquidityUsd:
-          pair?.liquidity?.usd ||
+          liquidity ||
           null,
-        volume24h:
-          pair?.volume?.h24 ||
-          0,
-        priceChange24h:
-          pair?.priceChange?.h24 ||
-          0
+
+        volume24h,
+
+        priceChange24h,
+
+        volumeLiquidityRatio:
+          Number(
+            volumeLiquidityRatio.toFixed(2)
+          )
       },
 
       trading: {
         buys1h,
         sells1h,
+        totalTrades,
         buyPressure
       },
 
       holders: {
         supply,
-        top1Percentage:
-          Number(top1Percentage.toFixed(2)),
-        top5Percentage:
-          Number(top5Percentage.toFixed(2)),
-        top10Percentage:
-          Number(top10Percentage.toFixed(2)),
-        uniqueOwners: holders.length,
 
-        accounts: holders
-          .slice(0, 20)
-          .map((holder, index) => ({
-            rank: index + 1,
-            address: holder.address,
-            amount: holder.amount,
-            percentage: holder.percentage
-          }))
+        top1Percentage:
+          Number(
+            top1Percentage.toFixed(2)
+          ),
+
+        top5Percentage:
+          Number(
+            top5Percentage.toFixed(2)
+          ),
+
+        top10Percentage:
+          Number(
+            top10Percentage.toFixed(2)
+          ),
+
+        uniqueOwners,
+
+        accounts:
+          holders
+            .slice(0, 20)
+            .map(
+              (holder, index) => ({
+                rank: index + 1,
+                address:
+                  holder.address,
+                amount:
+                  holder.amount,
+                percentage:
+                  holder.percentage
+              })
+            )
       }
     });
 
