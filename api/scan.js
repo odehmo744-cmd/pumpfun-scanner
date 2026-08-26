@@ -74,9 +74,7 @@ export default async function handler(req, res) {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(
-          `RPC HTTP ${response.status}`
-        );
+        throw new Error(`RPC HTTP ${response.status}`);
       }
 
       if (data.error) {
@@ -110,14 +108,10 @@ export default async function handler(req, res) {
       ? await dexResponse.json()
       : [];
 
-    if (
-      !Array.isArray(pairs) ||
-      pairs.length === 0
-    ) {
+    if (!Array.isArray(pairs) || pairs.length === 0) {
       return res.status(404).json({
         success: false,
-        error:
-          "No market data found for this token"
+        error: "No market data found for this token"
       });
     }
 
@@ -140,26 +134,19 @@ export default async function handler(req, res) {
       validPairs
         .filter(
           p =>
-            Number(
-              p?.liquidity?.usd || 0
-            ) > 0
+            Number(p?.liquidity?.usd || 0) > 0
         )
         .sort(
           (a, b) =>
-            Number(
-              b?.liquidity?.usd || 0
-            ) -
-            Number(
-              a?.liquidity?.usd || 0
-            )
+            Number(b?.liquidity?.usd || 0) -
+            Number(a?.liquidity?.usd || 0)
         )[0] ||
       validPairs[0];
 
     if (!pair) {
       return res.status(404).json({
         success: false,
-        error:
-          "No usable trading pair found"
+        error: "No usable trading pair found"
       });
     }
 
@@ -208,24 +195,16 @@ export default async function handler(req, res) {
     // ==================================================
 
     const buys1h =
-      Number(
-        pair?.txns?.h1?.buys || 0
-      );
+      Number(pair?.txns?.h1?.buys || 0);
 
     const sells1h =
-      Number(
-        pair?.txns?.h1?.sells || 0
-      );
+      Number(pair?.txns?.h1?.sells || 0);
 
     const buys5m =
-      Number(
-        pair?.txns?.m5?.buys || 0
-      );
+      Number(pair?.txns?.m5?.buys || 0);
 
     const sells5m =
-      Number(
-        pair?.txns?.m5?.sells || 0
-      );
+      Number(pair?.txns?.m5?.sells || 0);
 
     const totalTrades =
       buys1h + sells1h;
@@ -237,8 +216,7 @@ export default async function handler(req, res) {
       totalTrades > 0
         ? Number(
             (
-              (buys1h /
-                totalTrades) *
+              (buys1h / totalTrades) *
               100
             ).toFixed(2)
           )
@@ -248,8 +226,7 @@ export default async function handler(req, res) {
       totalTrades5m > 0
         ? Number(
             (
-              (buys5m /
-                totalTrades5m) *
+              (buys5m / totalTrades5m) *
               100
             ).toFixed(2)
           )
@@ -260,18 +237,13 @@ export default async function handler(req, res) {
     // ==================================================
 
     const pairCreatedAt =
-      Number(
-        pair?.pairCreatedAt || 0
-      );
+      Number(pair?.pairCreatedAt || 0);
 
     const pairAgeMinutes =
       pairCreatedAt > 0
         ? Math.max(
             0,
-            (
-              scannedAt -
-              pairCreatedAt
-            ) / 60000
+            (scannedAt - pairCreatedAt) / 60000
           )
         : null;
 
@@ -328,10 +300,7 @@ export default async function handler(req, res) {
         );
 
       const parsed =
-        mintAccount?.value
-          ?.data
-          ?.parsed
-          ?.info;
+        mintAccount?.value?.data?.parsed?.info;
 
       mintAuthority =
         parsed?.mintAuthority || null;
@@ -339,7 +308,7 @@ export default async function handler(req, res) {
       freezeAuthority =
         parsed?.freezeAuthority || null;
     } catch {
-      // Don't fail scan
+      // Do not fail scan
     }
 
     // ==================================================
@@ -362,13 +331,12 @@ export default async function handler(req, res) {
       largestResult?.value || [];
 
     const addresses =
-      largestAccounts.map(
-        account =>
-          account.address
-      );
+      largestAccounts
+        .map(account => account?.address)
+        .filter(Boolean);
 
     // ==================================================
-    // OWNERS
+    // GET TOKEN ACCOUNT OWNERS
     // ==================================================
 
     let ownerAccounts = [];
@@ -392,8 +360,7 @@ export default async function handler(req, res) {
     // HOLDER AGGREGATION
     // ==================================================
 
-    const holdersMap =
-      new Map();
+    const holdersMap = new Map();
 
     largestAccounts.forEach(
       (account, index) => {
@@ -401,17 +368,15 @@ export default async function handler(req, res) {
         const accountInfo =
           ownerAccounts[index];
 
+        const parsedInfo =
+          accountInfo?.data?.parsed?.info;
+
         const owner =
-          accountInfo
-            ?.data
-            ?.parsed
-            ?.info
-            ?.owner;
+          parsedInfo?.owner ||
+          null;
 
         const amount =
-          Number(
-            account?.uiAmount || 0
-          );
+          Number(account?.uiAmount || 0);
 
         if (
           !owner ||
@@ -442,8 +407,7 @@ export default async function handler(req, res) {
               supply > 0
                 ? Number(
                     (
-                      (amount /
-                        supply) *
+                      (amount / supply) *
                       100
                     ).toFixed(4)
                   )
@@ -452,8 +416,7 @@ export default async function handler(req, res) {
         )
         .sort(
           (a, b) =>
-            b.amount -
-            a.amount
+            b.amount - a.amount
         );
 
     // ==================================================
@@ -468,8 +431,7 @@ export default async function handler(req, res) {
         .slice(0, 3)
         .reduce(
           (sum, holder) =>
-            sum +
-            holder.percentage,
+            sum + holder.percentage,
           0
         );
 
@@ -478,8 +440,7 @@ export default async function handler(req, res) {
         .slice(0, 5)
         .reduce(
           (sum, holder) =>
-            sum +
-            holder.percentage,
+            sum + holder.percentage,
           0
         );
 
@@ -488,8 +449,7 @@ export default async function handler(req, res) {
         .slice(0, 10)
         .reduce(
           (sum, holder) =>
-            sum +
-            holder.percentage,
+            sum + holder.percentage,
           0
         );
 
@@ -498,8 +458,7 @@ export default async function handler(req, res) {
         .slice(0, 20)
         .reduce(
           (sum, holder) =>
-            sum +
-            holder.percentage,
+            sum + holder.percentage,
           0
         );
 
@@ -522,21 +481,18 @@ export default async function handler(req, res) {
         .map(
           (holder, index) => ({
             rank: index + 1,
-            address:
-              holder.address,
-            amount:
-              holder.amount,
-            percentage:
-              holder.percentage
+            address: holder.address,
+            amount: holder.amount,
+            percentage: holder.percentage
           })
         );
 
     // ==================================================
-    // HELIUS ENHANCED TRANSACTIONS
+    // HELIUS TRANSACTION HISTORY
     //
-    // Used for:
-    // - Creator / Dev
-    // - First Buyers
+    // We request token-account related history too.
+    // This is important because the mint address itself
+    // does not represent the actual holder wallets.
     // ==================================================
 
     let enhancedTransactions = [];
@@ -547,7 +503,9 @@ export default async function handler(req, res) {
         encodeURIComponent(token) +
         "/transactions?api-key=" +
         encodeURIComponent(heliusKey) +
-        "&limit=100";
+        "&limit=100" +
+        "&token-accounts=all" +
+        "&sort-order=asc";
 
       const txResponse =
         await fetch(
@@ -566,11 +524,8 @@ export default async function handler(req, res) {
         const txData =
           await txResponse.json();
 
-        if (
-          Array.isArray(txData)
-        ) {
-          enhancedTransactions =
-            txData;
+        if (Array.isArray(txData)) {
+          enhancedTransactions = txData;
         }
       }
     } catch {
@@ -578,40 +533,87 @@ export default async function handler(req, res) {
     }
 
     // ==================================================
-    // SORT TRANSACTIONS
-    // Oldest first
+    // SORT OLDEST FIRST
     // ==================================================
 
     enhancedTransactions.sort(
       (a, b) =>
-        Number(
-          a?.timestamp || 0
-        ) -
-        Number(
-          b?.timestamp || 0
-        )
+        Number(a?.timestamp || 0) -
+        Number(b?.timestamp || 0)
     );
 
     // ==================================================
+    // HELPER:
+    // CHECK WHETHER ADDRESS IS A REAL WALLET
+    // ==================================================
+
+    function isValidAddress(address) {
+      return (
+        typeof address === "string" &&
+        address.length >= 32 &&
+        address.length <= 44 &&
+        address !== token
+      );
+    }
+
+    // ==================================================
     // CREATOR / DEV DETECTION
+    //
+    // We don't simply call the first fee payer "DEV".
+    // We first find the earliest transaction that
+    // actually interacted with this token.
     // ==================================================
 
     let creatorAddress = null;
     let creatorTransaction = null;
 
-    for (
-      const tx of enhancedTransactions
-    ) {
+    for (const tx of enhancedTransactions) {
+
+      const tokenTransfers =
+        Array.isArray(tx?.tokenTransfers)
+          ? tx.tokenTransfers
+          : [];
+
+      const relatedTransfer =
+        tokenTransfers.some(
+          transfer =>
+            String(transfer?.mint || "") ===
+            String(token)
+        );
+
+      const accountData =
+        Array.isArray(tx?.accountData)
+          ? tx.accountData
+          : [];
+
+      const relatedBalanceChange =
+        accountData.some(
+          item =>
+            Array.isArray(
+              item?.tokenBalanceChanges
+            ) &&
+            item.tokenBalanceChanges.some(
+              change =>
+                String(change?.mint || "") ===
+                String(token)
+            )
+        );
+
+      if (
+        !relatedTransfer &&
+        !relatedBalanceChange
+      ) {
+        continue;
+      }
 
       const feePayer =
         tx?.feePayer ||
         tx?.fee_payer ||
-        tx?.signer ||
-        tx?.signers?.[0] ||
         null;
 
-      if (feePayer) {
-
+      if (
+        isValidAddress(feePayer)
+      ) {
         creatorAddress =
           feePayer;
 
@@ -624,19 +626,19 @@ export default async function handler(req, res) {
 
     // ==================================================
     // FIRST BUYERS
+    //
+    // Only count positive token transfers involving
+    // user accounts. We prefer Helius user-account fields
+    // over token-account fields.
     // ==================================================
 
     const firstBuyerMap =
       new Map();
 
-    for (
-      const tx of enhancedTransactions
-    ) {
+    for (const tx of enhancedTransactions) {
 
       const tokenTransfers =
-        Array.isArray(
-          tx?.tokenTransfers
-        )
+        Array.isArray(tx?.tokenTransfers)
           ? tx.tokenTransfers
           : [];
 
@@ -645,19 +647,23 @@ export default async function handler(req, res) {
           tx?.type || ""
         ).toUpperCase();
 
-      // We primarily want swap transactions
-      const isPotentialBuy =
-        txType === "SWAP" ||
-        txType === "UNKNOWN" ||
-        txType === "";
+      // Ignore obvious non-trading operations.
+      const ignoredTypes = new Set([
+        "CREATE_ACCOUNT",
+        "CLOSE_ACCOUNT",
+        "BURN",
+        "BURN_NFT",
+        "COMPRESSED_NFT_BURN",
+        "MINT_TO"
+      ]);
 
-      if (!isPotentialBuy) {
+      if (
+        ignoredTypes.has(txType)
+      ) {
         continue;
       }
 
-      for (
-        const transfer of tokenTransfers
-      ) {
+      for (const transfer of tokenTransfers) {
 
         const mint =
           transfer?.mint;
@@ -671,12 +677,10 @@ export default async function handler(req, res) {
 
         const to =
           transfer?.toUserAccount ||
-          transfer?.toTokenAccount ||
           null;
 
         const from =
           transfer?.fromUserAccount ||
-          transfer?.fromTokenAccount ||
           null;
 
         const amount =
@@ -685,13 +689,16 @@ export default async function handler(req, res) {
           );
 
         if (
-          !to ||
+          !isValidAddress(to) ||
           amount <= 0
         ) {
           continue;
         }
 
-        // Avoid counting creator as first buyer
+        // ----------------------------------------------
+        // Don't count the creator as an early buyer
+        // ----------------------------------------------
+
         if (
           creatorAddress &&
           to === creatorAddress
@@ -699,12 +706,21 @@ export default async function handler(req, res) {
           continue;
         }
 
-        // Avoid obvious pool/system style addresses
+        // ----------------------------------------------
+        // Don't count obvious pool-to-pool transfers
+        // ----------------------------------------------
+
         if (
-          to === token
+          from &&
+          to === from
         ) {
           continue;
         }
+
+        // ----------------------------------------------
+        // A wallet receiving tokens is only considered
+        // if it is a user-level account.
+        // ----------------------------------------------
 
         if (
           !firstBuyerMap.has(to)
@@ -718,13 +734,16 @@ export default async function handler(req, res) {
               transactions: 1,
               firstSeen:
                 Number(
-                  tx?.timestamp ||
-                  0
+                  tx?.timestamp || 0
                 ),
               signature:
                 tx?.signature ||
                 tx?.transactionSignature ||
-                null
+                null,
+              types:
+                txType
+                  ? [txType]
+                  : []
             }
           );
 
@@ -735,9 +754,20 @@ export default async function handler(req, res) {
 
           existing.amount += amount;
           existing.transactions += 1;
+
+          if (
+            txType &&
+            !existing.types.includes(txType)
+          ) {
+            existing.types.push(txType);
+          }
         }
       }
     }
+
+    // ==================================================
+    // FIRST BUYERS RESULT
+    // ==================================================
 
     const firstBuyers =
       Array.from(
@@ -745,8 +775,7 @@ export default async function handler(req, res) {
       )
         .sort(
           (a, b) =>
-            a.firstSeen -
-            b.firstSeen
+            a.firstSeen - b.firstSeen
         )
         .slice(0, 20)
         .map(
@@ -761,12 +790,13 @@ export default async function handler(req, res) {
             firstSeen:
               buyer.firstSeen
                 ? new Date(
-                    buyer.firstSeen *
-                      1000
+                    buyer.firstSeen * 1000
                   ).toISOString()
                 : null,
             signature:
-              buyer.signature
+              buyer.signature,
+            transactionTypes:
+              buyer.types
           })
         );
 
@@ -788,8 +818,7 @@ export default async function handler(req, res) {
       supply > 0
         ? Number(
             (
-              (firstBuyerTotal /
-                supply) *
+              (firstBuyerTotal / supply) *
               100
             ).toFixed(2)
           )
@@ -812,7 +841,6 @@ export default async function handler(req, res) {
         );
 
       if (devHolder) {
-
         devHolding =
           devHolder.amount;
 
@@ -854,7 +882,7 @@ export default async function handler(req, res) {
       } else {
 
         developerStatus =
-          "Creator detected but no significant current holding found";
+          "⚠️ Creator detected but no significant current holding found";
       }
     }
 
@@ -864,25 +892,19 @@ export default async function handler(req, res) {
 
     const riskFlags = [];
 
-    // Liquidity
-    if (
-      liquidity < 10000
-    ) {
+    if (liquidity < 10000) {
 
       riskFlags.push(
         "🚨 Extremely low liquidity"
       );
 
-    } else if (
-      liquidity < 20000
-    ) {
+    } else if (liquidity < 20000) {
 
       riskFlags.push(
         "⚠️ Low liquidity"
       );
     }
 
-    // Volume
     if (
       liquidity > 0 &&
       volumeLiquidityRatio > 50
@@ -902,61 +924,45 @@ export default async function handler(req, res) {
       );
     }
 
-    // Selling
-    if (
-      buyPressure < 40
-    ) {
+    if (buyPressure < 40) {
 
       riskFlags.push(
         "🚨 Heavy selling pressure"
       );
 
-    } else if (
-      buyPressure < 48
-    ) {
+    } else if (buyPressure < 48) {
 
       riskFlags.push(
         "⚠️ Selling pressure is elevated"
       );
     }
 
-    // Top holder
-    if (
-      top1Percentage > 30
-    ) {
+    if (top1Percentage > 30) {
 
       riskFlags.push(
         "🚨 Top holder concentration is very high"
       );
 
-    } else if (
-      top1Percentage > 20
-    ) {
+    } else if (top1Percentage > 20) {
 
       riskFlags.push(
         "⚠️ Top holder concentration is elevated"
       );
     }
 
-    // Top 5
-    if (
-      top5Percentage > 65
-    ) {
+    if (top5Percentage > 65) {
 
       riskFlags.push(
         "🚨 Top 5 holders control a large supply"
       );
 
-    } else if (
-      top5Percentage > 50
-    ) {
+    } else if (top5Percentage > 50) {
 
       riskFlags.push(
         "⚠️ High top 5 concentration"
       );
     }
 
-    // Mint authority
     if (mintAuthority) {
 
       riskFlags.push(
@@ -964,7 +970,6 @@ export default async function handler(req, res) {
       );
     }
 
-    // Freeze authority
     if (freezeAuthority) {
 
       riskFlags.push(
@@ -972,7 +977,6 @@ export default async function handler(req, res) {
       );
     }
 
-    // Pair age
     if (
       pairAgeMinutes !== null &&
       pairAgeMinutes < 10
@@ -992,25 +996,19 @@ export default async function handler(req, res) {
       );
     }
 
-    // Momentum
-    if (
-      priceChange24h > 1500
-    ) {
+    if (priceChange24h > 1500) {
 
       riskFlags.push(
         "🚨 Extreme 24H price increase"
       );
 
-    } else if (
-      priceChange24h > 500
-    ) {
+    } else if (priceChange24h > 500) {
 
       riskFlags.push(
         "⚠️ Very large 24H price increase"
       );
     }
 
-    // Activity
     if (
       totalTrades > 0 &&
       totalTrades < 50
@@ -1021,7 +1019,6 @@ export default async function handler(req, res) {
       );
     }
 
-    // Creator
     if (
       devHoldingPercentage > 20
     ) {
@@ -1039,7 +1036,6 @@ export default async function handler(req, res) {
       );
     }
 
-    // First buyers
     if (
       firstBuyerPercentage > 30
     ) {
@@ -1063,17 +1059,13 @@ export default async function handler(req, res) {
 
     const positives = [];
 
-    if (
-      liquidity >= 100000
-    ) {
+    if (liquidity >= 100000) {
 
       positives.push(
         "Strong liquidity"
       );
 
-    } else if (
-      liquidity >= 50000
-    ) {
+    } else if (liquidity >= 50000) {
 
       positives.push(
         "Good liquidity"
@@ -1090,53 +1082,41 @@ export default async function handler(req, res) {
       );
     }
 
-    if (
-      buyPressure >= 60
-    ) {
+    if (buyPressure >= 60) {
 
       positives.push(
         "Strong buying pressure"
       );
 
-    } else if (
-      buyPressure >= 55
-    ) {
+    } else if (buyPressure >= 55) {
 
       positives.push(
         "Positive buying pressure"
       );
     }
 
-    if (
-      top1Percentage <= 10
-    ) {
+    if (top1Percentage <= 10) {
 
       positives.push(
         "Low top-holder concentration"
       );
     }
 
-    if (
-      top5Percentage <= 30
-    ) {
+    if (top5Percentage <= 30) {
 
       positives.push(
         "Healthy top-5 concentration"
       );
     }
 
-    if (
-      uniqueOwners >= 100
-    ) {
+    if (uniqueOwners >= 100) {
 
       positives.push(
         "Good holder distribution"
       );
     }
 
-    if (
-      totalTrades >= 2000
-    ) {
+    if (totalTrades >= 2000) {
 
       positives.push(
         "Very active trading"
@@ -1153,9 +1133,7 @@ export default async function handler(req, res) {
       );
     }
 
-    if (
-      firstBuyers.length >= 5
-    ) {
+    if (firstBuyers.length >= 5) {
 
       positives.push(
         "Multiple early buyers detected"
@@ -1169,27 +1147,19 @@ export default async function handler(req, res) {
     let score = 0;
 
     // Liquidity: 20
-    if (
-      liquidity >= 100000
-    ) {
+    if (liquidity >= 100000) {
 
       score += 20;
 
-    } else if (
-      liquidity >= 50000
-    ) {
+    } else if (liquidity >= 50000) {
 
       score += 16;
 
-    } else if (
-      liquidity >= 20000
-    ) {
+    } else if (liquidity >= 20000) {
 
       score += 12;
 
-    } else if (
-      liquidity >= 10000
-    ) {
+    } else if (liquidity >= 10000) {
 
       score += 7;
     }
@@ -1222,27 +1192,19 @@ export default async function handler(req, res) {
     }
 
     // Buy pressure: 15
-    if (
-      buyPressure >= 60
-    ) {
+    if (buyPressure >= 60) {
 
       score += 15;
 
-    } else if (
-      buyPressure >= 55
-    ) {
+    } else if (buyPressure >= 55) {
 
       score += 12;
 
-    } else if (
-      buyPressure >= 48
-    ) {
+    } else if (buyPressure >= 48) {
 
       score += 9;
 
-    } else if (
-      buyPressure >= 40
-    ) {
+    } else if (buyPressure >= 40) {
 
       score += 5;
     }
@@ -1282,61 +1244,43 @@ export default async function handler(req, res) {
     }
 
     // Top holder: 10
-    if (
-      top1Percentage <= 10
-    ) {
+    if (top1Percentage <= 10) {
 
       score += 10;
 
-    } else if (
-      top1Percentage <= 20
-    ) {
+    } else if (top1Percentage <= 20) {
 
       score += 8;
 
-    } else if (
-      top1Percentage <= 30
-    ) {
+    } else if (top1Percentage <= 30) {
 
       score += 5;
     }
 
     // Top 5: 10
-    if (
-      top5Percentage <= 30
-    ) {
+    if (top5Percentage <= 30) {
 
       score += 10;
 
-    } else if (
-      top5Percentage <= 50
-    ) {
+    } else if (top5Percentage <= 50) {
 
       score += 7;
 
-    } else if (
-      top5Percentage <= 65
-    ) {
+    } else if (top5Percentage <= 65) {
 
       score += 3;
     }
 
     // Holder distribution: 10
-    if (
-      uniqueOwners >= 100
-    ) {
+    if (uniqueOwners >= 100) {
 
       score += 10;
 
-    } else if (
-      uniqueOwners >= 50
-    ) {
+    } else if (uniqueOwners >= 50) {
 
       score += 8;
 
-    } else if (
-      uniqueOwners >= 20
-    ) {
+    } else if (uniqueOwners >= 20) {
 
       score += 5;
 
@@ -1346,61 +1290,43 @@ export default async function handler(req, res) {
     }
 
     // Trading activity: 10
-    if (
-      totalTrades >= 2000
-    ) {
+    if (totalTrades >= 2000) {
 
       score += 10;
 
-    } else if (
-      totalTrades >= 1000
-    ) {
+    } else if (totalTrades >= 1000) {
 
       score += 8;
 
-    } else if (
-      totalTrades >= 300
-    ) {
+    } else if (totalTrades >= 300) {
 
       score += 5;
 
-    } else if (
-      totalTrades > 0
-    ) {
+    } else if (totalTrades > 0) {
 
       score += 2;
     }
 
     // Creator penalty
-    if (
-      devHoldingPercentage > 30
-    ) {
+    if (devHoldingPercentage > 30) {
 
       score -= 15;
 
-    } else if (
-      devHoldingPercentage > 20
-    ) {
+    } else if (devHoldingPercentage > 20) {
 
       score -= 10;
 
-    } else if (
-      devHoldingPercentage > 10
-    ) {
+    } else if (devHoldingPercentage > 10) {
 
       score -= 5;
     }
 
     // First buyer concentration penalty
-    if (
-      firstBuyerPercentage > 30
-    ) {
+    if (firstBuyerPercentage > 30) {
 
       score -= 10;
 
-    } else if (
-      firstBuyerPercentage > 15
-    ) {
+    } else if (firstBuyerPercentage > 15) {
 
       score -= 5;
     }
@@ -1429,23 +1355,17 @@ export default async function handler(req, res) {
 
     let verdict;
 
-    if (
-      score >= 75
-    ) {
+    if (score >= 75) {
 
       verdict =
         "🟢 BUY / STRONG WATCH";
 
-    } else if (
-      score >= 55
-    ) {
+    } else if (score >= 55) {
 
       verdict =
         "🟡 WATCH";
 
-    } else if (
-      score >= 35
-    ) {
+    } else if (score >= 35) {
 
       verdict =
         "🟠 HIGH RISK";
@@ -1462,25 +1382,19 @@ export default async function handler(req, res) {
 
     const analysis = [];
 
-    if (
-      liquidity >= 100000
-    ) {
+    if (liquidity >= 100000) {
 
       analysis.push(
         "Strong liquidity"
       );
 
-    } else if (
-      liquidity >= 50000
-    ) {
+    } else if (liquidity >= 50000) {
 
       analysis.push(
         "Good liquidity"
       );
 
-    } else if (
-      liquidity >= 20000
-    ) {
+    } else if (liquidity >= 20000) {
 
       analysis.push(
         "Acceptable liquidity"
@@ -1525,25 +1439,19 @@ export default async function handler(req, res) {
       );
     }
 
-    if (
-      buyPressure >= 60
-    ) {
+    if (buyPressure >= 60) {
 
       analysis.push(
         "Strong buying pressure"
       );
 
-    } else if (
-      buyPressure >= 55
-    ) {
+    } else if (buyPressure >= 55) {
 
       analysis.push(
         "Positive buying pressure"
       );
 
-    } else if (
-      buyPressure >= 48
-    ) {
+    } else if (buyPressure >= 48) {
 
       analysis.push(
         "Buy/sell pressure is relatively balanced"
@@ -1556,17 +1464,13 @@ export default async function handler(req, res) {
       );
     }
 
-    if (
-      top1Percentage <= 10
-    ) {
+    if (top1Percentage <= 10) {
 
       analysis.push(
         "Healthy top holder concentration"
       );
 
-    } else if (
-      top1Percentage <= 20
-    ) {
+    } else if (top1Percentage <= 20) {
 
       analysis.push(
         "Moderate top holder concentration"
@@ -1579,17 +1483,13 @@ export default async function handler(req, res) {
       );
     }
 
-    if (
-      top5Percentage <= 30
-    ) {
+    if (top5Percentage <= 30) {
 
       analysis.push(
         "Healthy top 5 concentration"
       );
 
-    } else if (
-      top5Percentage <= 50
-    ) {
+    } else if (top5Percentage <= 50) {
 
       analysis.push(
         "Moderate top 5 concentration"
@@ -1602,17 +1502,13 @@ export default async function handler(req, res) {
       );
     }
 
-    if (
-      uniqueOwners >= 100
-    ) {
+    if (uniqueOwners >= 100) {
 
       analysis.push(
         "Strong holder distribution"
       );
 
-    } else if (
-      uniqueOwners >= 50
-    ) {
+    } else if (uniqueOwners >= 50) {
 
       analysis.push(
         "Good holder distribution"
@@ -1625,18 +1521,19 @@ export default async function handler(req, res) {
       );
     }
 
-    if (
-      creatorAddress
-    ) {
+    if (creatorAddress) {
 
       analysis.push(
         developerStatus
       );
+    } else {
+
+      analysis.push(
+        "⚠️ Creator could not be confidently identified"
+      );
     }
 
-    if (
-      firstBuyers.length > 0
-    ) {
+    if (firstBuyers.length > 0) {
 
       analysis.push(
         `${firstBuyers.length} early buyer wallets detected`
@@ -1649,18 +1546,14 @@ export default async function handler(req, res) {
       );
     }
 
-    if (
-      mintAuthority
-    ) {
+    if (mintAuthority) {
 
       analysis.push(
         "⚠️ Mint authority remains active"
       );
     }
 
-    if (
-      freezeAuthority
-    ) {
+    if (freezeAuthority) {
 
       analysis.push(
         "⚠️ Freeze authority remains active"
@@ -1677,9 +1570,7 @@ export default async function handler(req, res) {
         Boolean(pair),
 
       helius:
-        Boolean(
-          supplyResult
-        ),
+        Boolean(supplyResult),
 
       enhancedTransactions:
         enhancedTransactions.length,
@@ -1688,15 +1579,13 @@ export default async function handler(req, res) {
         firstBuyers.length,
 
       creatorDetected:
-        Boolean(
-          creatorAddress
-        ),
+        Boolean(creatorAddress),
 
       holderAccounts:
         holders.length,
 
       note:
-        "Some creator and first-buyer fields may be unavailable for very new tokens or incomplete transaction history."
+        "Creator and first-buyer detection is based on available on-chain transaction history. Very new tokens may have incomplete history."
     };
 
     // ==================================================
@@ -1720,12 +1609,12 @@ export default async function handler(req, res) {
           token,
 
         name:
-          pair?.baseToken
-            ?.name || null,
+          pair?.baseToken?.name ||
+          null,
 
         symbol:
-          pair?.baseToken
-            ?.symbol || null
+          pair?.baseToken?.symbol ||
+          null
       },
 
       scanner: {
@@ -1765,23 +1654,20 @@ export default async function handler(req, res) {
 
         volumeLiquidityRatio:
           Number(
-            volumeLiquidityRatio
-              .toFixed(2)
+            volumeLiquidityRatio.toFixed(2)
           ),
 
         pairAgeMinutes:
           pairAgeMinutes !== null
             ? Number(
-                pairAgeMinutes
-                  .toFixed(2)
+                pairAgeMinutes.toFixed(2)
               )
             : null,
 
         pairAgeHours:
           pairAgeHours !== null
             ? Number(
-                pairAgeHours
-                  .toFixed(2)
+                pairAgeHours.toFixed(2)
               )
             : null,
 
@@ -1828,32 +1714,27 @@ export default async function handler(req, res) {
 
         top1Percentage:
           Number(
-            top1Percentage
-              .toFixed(2)
+            top1Percentage.toFixed(2)
           ),
 
         top3Percentage:
           Number(
-            top3Percentage
-              .toFixed(2)
+            top3Percentage.toFixed(2)
           ),
 
         top5Percentage:
           Number(
-            top5Percentage
-              .toFixed(2)
+            top5Percentage.toFixed(2)
           ),
 
         top10Percentage:
           Number(
-            top10Percentage
-              .toFixed(2)
+            top10Percentage.toFixed(2)
           ),
 
         top20Percentage:
           Number(
-            top20Percentage
-              .toFixed(2)
+            top20Percentage.toFixed(2)
           ),
 
         whale5,
@@ -1881,15 +1762,12 @@ export default async function handler(req, res) {
 
         holdingPercentage:
           Number(
-            devHoldingPercentage
-              .toFixed(2)
+            devHoldingPercentage.toFixed(2)
           ),
 
         transactionSignature:
-          creatorTransaction
-            ?.signature ||
-          creatorTransaction
-            ?.transactionSignature ||
+          creatorTransaction?.signature ||
+          creatorTransaction?.transactionSignature ||
           null,
 
         detectedFrom:
