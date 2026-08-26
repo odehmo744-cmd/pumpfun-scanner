@@ -1,10 +1,16 @@
-async function login() {
-  const password = document
-    .getElementById("passwordInput")
-    .value
-    .trim();
+// =====================================================
+// LOGIN
+// =====================================================
 
-  const loginResult = document.getElementById("loginResult");
+async function login() {
+  const passwordInput =
+    document.getElementById("passwordInput");
+
+  const loginResult =
+    document.getElementById("loginResult");
+
+  const password =
+    passwordInput.value.trim();
 
   if (!password) {
     loginResult.innerHTML = `
@@ -24,6 +30,7 @@ async function login() {
   try {
     const response = await fetch("/api/login", {
       method: "POST",
+      credentials: "same-origin",
       headers: {
         "Content-Type": "application/json"
       },
@@ -35,47 +42,119 @@ async function login() {
     const data = await response.json();
 
     if (!response.ok || !data.success) {
-      throw new Error(data.error || "Login failed");
+      throw new Error(
+        data.error || "Login failed"
+      );
     }
 
-    // Save login session
-    sessionStorage.setItem("scannerAuthenticated", "true");
+    // IMPORTANT:
+    // Authentication is stored in the HttpOnly cookie
+    // created by /api/login.
+    // We DO NOT store the password or authentication
+    // state in localStorage/sessionStorage.
 
-    document.getElementById("loginBox").style.display = "none";
-    document.getElementById("scannerBox").style.display = "block";
+    passwordInput.value = "";
+
+    document.getElementById("loginBox").style.display =
+      "none";
+
+    document.getElementById("scannerBox").style.display =
+      "block";
+
+    loginResult.innerHTML = "";
 
   } catch (error) {
     loginResult.innerHTML = `
       <div class="danger">
-        ❌ ${error.message}
+        ❌ ${escapeHtml(error.message)}
       </div>
     `;
   }
 }
 
 
-// Check if already logged in during this browser session
-function checkLogin() {
-  const authenticated =
-    sessionStorage.getItem("scannerAuthenticated");
+// =====================================================
+// CHECK LOGIN
+// =====================================================
 
-  if (authenticated === "true") {
-    document.getElementById("loginBox").style.display = "none";
-    document.getElementById("scannerBox").style.display = "block";
+async function checkLogin() {
+  /*
+    We cannot directly read the HttpOnly cookie from
+    JavaScript — and that's intentional.
+
+    Instead, we test the protected API.
+  */
+
+  try {
+    const response = await fetch(
+      "/api/scan?token=11111111111111111111111111111111",
+      {
+        method: "GET",
+        credentials: "same-origin"
+      }
+    );
+
+    /*
+      401 = not authenticated.
+      Any other response means the authentication
+      cookie was accepted by the server.
+
+      We don't actually need valid token data here.
+    */
+
+    if (response.status !== 401) {
+      document.getElementById("loginBox").style.display =
+        "none";
+
+      document.getElementById("scannerBox").style.display =
+        "block";
+    } else {
+      document.getElementById("loginBox").style.display =
+        "block";
+
+      document.getElementById("scannerBox").style.display =
+        "none";
+    }
+
+  } catch (error) {
+    // If the check fails, show login screen.
+    document.getElementById("loginBox").style.display =
+      "block";
+
+    document.getElementById("scannerBox").style.display =
+      "none";
   }
 }
 
 
-// Extract token address
+// =====================================================
+// EXTRACT TOKEN ADDRESS
+// =====================================================
+
 function extractTokenAddress(input) {
   input = input.trim();
 
+  if (!input) {
+    return "";
+  }
+
+  /*
+    If user pasted only the contract address
+  */
   if (!input.includes("http")) {
     return input;
   }
 
+  /*
+    Supports:
+
+    https://pump.fun/coin/ADDRESS
+    https://pump.fun/ADDRESS
+    https://www.pump.fun/coin/ADDRESS
+  */
+
   const match = input.match(
-    /pump\.fun\/(?:coin\/)?([^/?]+)/i
+    /pump\.fun\/(?:coin\/)?([^/?#]+)/i
   );
 
   if (match) {
@@ -86,10 +165,17 @@ function extractTokenAddress(input) {
 }
 
 
-// Scan token
+// =====================================================
+// SCAN TOKEN
+// =====================================================
+
 async function scanToken() {
+
   const input =
-    document.getElementById("tokenInput").value.trim();
+    document
+      .getElementById("tokenInput")
+      .value
+      .trim();
 
   const result =
     document.getElementById("result");
@@ -102,25 +188,83 @@ async function scanToken() {
         </div>
       </div>
     `;
+
     return;
   }
 
-  const token = extractTokenAddress(input);
+  const token =
+    extractTokenAddress(input);
+
+  if (!token) {
+    result.innerHTML = `
+      <div class="card">
+        <div class="danger">
+          Invalid token address.
+        </div>
+      </div>
+    `;
+
+    return;
+  }
 
   result.innerHTML = `
     <div class="card">
-      <div class="small">Scanning...</div>
-      <h2>🔎 Analyzing token</h2>
-      <p>Please wait...</p>
+      <div class="small">
+        SCANNER
+      </div>
+
+      <h2>
+        🔎 Analyzing token
+      </h2>
+
+      <p>
+        Please wait...
+      </p>
     </div>
   `;
 
   try {
-    const response = await fetch(
-      `/api/scan?token=${encodeURIComponent(token)}`
-    );
 
-    const data = await response.json();
+    /*
+      credentials: "same-origin" is important.
+
+      The browser automatically sends the HttpOnly
+      scanner_auth cookie with this request.
+    */
+
+    const response =
+      await fetch(
+        `/api/scan?token=${encodeURIComponent(token)}`,
+        {
+          method: "GET",
+          credentials: "same-origin"
+        }
+      );
+
+    const data =
+      await response.json();
+
+    /*
+      If authentication expired or the user doesn't
+      have access anymore.
+    */
+
+    if (response.status === 401) {
+
+      document.getElementById("loginBox").style.display =
+        "block";
+
+      document.getElementById("scannerBox").style.display =
+        "none";
+
+      result.innerHTML = "";
+
+      alert(
+        "Your session has expired. Please login again."
+      );
+
+      return;
+    }
 
     if (!response.ok || !data.success) {
       throw new Error(
@@ -128,21 +272,14 @@ async function scanToken() {
       );
     }
 
-    const pair = data;
-
-    if (!pair) {
-      throw new Error("No market data found.");
-    }
-
-    // Redirect the result to your existing scanner logic
-    displayScanResult(pair);
+    displayScanResult(data);
 
   } catch (error) {
 
     result.innerHTML = `
       <div class="card">
         <div class="danger">
-          ❌ ${error.message}
+          ❌ ${escapeHtml(error.message)}
         </div>
       </div>
     `;
@@ -150,29 +287,85 @@ async function scanToken() {
 }
 
 
-// Display scanner result
+// =====================================================
+// DISPLAY SCANNER RESULT
+// =====================================================
+
 function displayScanResult(data) {
 
   const result =
     document.getElementById("result");
 
-  const market = data.market || {};
-  const trading = data.trading || {};
-  const holders = data.holders || {};
-  const scanner = data.scanner || {};
-  const token = data.token || {};
+  const market =
+    data.market || {};
+
+  const trading =
+    data.trading || {};
+
+  const holders =
+    data.holders || {};
+
+  const scanner =
+    data.scanner || {};
+
+  const token =
+    data.token || {};
 
   const verdict =
     scanner.verdict || "UNKNOWN";
 
+  const score =
+    scanner.score ?? 0;
+
+  const analysis =
+    Array.isArray(scanner.analysis)
+      ? scanner.analysis
+      : [];
+
+
+  // ===================================================
+  // ANALYSIS HTML
+  // ===================================================
+
+  const analysisHtml =
+    analysis.length > 0
+
+      ? analysis
+          .map(
+            item => `
+              <p>
+                ${escapeHtml(String(item))}
+              </p>
+            `
+          )
+          .join("")
+
+      : `
+          <p>
+            No analysis available.
+          </p>
+        `;
+
+
+  // ===================================================
+  // RESULT
+  // ===================================================
+
   result.innerHTML = `
+
     <div class="card result">
 
-      <div class="small">TOKEN</div>
+      <div class="small">
+        TOKEN
+      </div>
 
       <h2>
-        ${token.name || "Unknown"}
-        (${token.symbol || "-"})
+        ${escapeHtml(
+          token.name || "Unknown"
+        )}
+        (${escapeHtml(
+          token.symbol || "-"
+        )})
       </h2>
 
       <hr>
@@ -182,12 +375,12 @@ function displayScanResult(data) {
       </div>
 
       <h2>
-        ${verdict}
+        ${escapeHtml(verdict)}
       </h2>
 
       <p>
         <strong>Score:</strong>
-        ${scanner.score ?? 0}/100
+        ${Number(score)}/100
       </p>
 
       <hr>
@@ -198,33 +391,46 @@ function displayScanResult(data) {
 
       <p>
         <strong>Price:</strong>
-        $${Number(market.priceUsd || 0).toFixed(10)}
+        $${formatPrice(
+          market.priceUsd
+        )}
       </p>
 
       <p>
         <strong>Market Cap:</strong>
-        $${Number(
-          market.marketCap || 0
-        ).toLocaleString()}
+        $${formatNumber(
+          market.marketCap
+        )}
       </p>
 
       <p>
         <strong>Liquidity:</strong>
-        $${Number(
-          market.liquidityUsd || 0
-        ).toLocaleString()}
+        $${formatNumber(
+          market.liquidityUsd
+        )}
       </p>
 
       <p>
         <strong>24H Volume:</strong>
-        $${Number(
-          market.volume24h || 0
-        ).toLocaleString()}
+        $${formatNumber(
+          market.volume24h
+        )}
       </p>
 
       <p>
         <strong>24H Change:</strong>
-        ${market.priceChange24h || 0}%
+        ${formatNumber(
+          market.priceChange24h,
+          2
+        )}%
+      </p>
+
+      <p>
+        <strong>Volume / Liquidity:</strong>
+        ${formatNumber(
+          market.volumeLiquidityRatio,
+          2
+        )}x
       </p>
 
       <hr>
@@ -235,17 +441,34 @@ function displayScanResult(data) {
 
       <p>
         <strong>1H Buys:</strong>
-        ${trading.buys1h || 0}
+        ${formatNumber(
+          trading.buys1h,
+          0
+        )}
       </p>
 
       <p>
         <strong>1H Sells:</strong>
-        ${trading.sells1h || 0}
+        ${formatNumber(
+          trading.sells1h,
+          0
+        )}
+      </p>
+
+      <p>
+        <strong>Total Trades:</strong>
+        ${formatNumber(
+          trading.totalTrades,
+          0
+        )}
       </p>
 
       <p>
         <strong>Buy Pressure:</strong>
-        ${trading.buyPressure || 0}%
+        ${formatNumber(
+          trading.buyPressure,
+          2
+        )}%
       </p>
 
       <hr>
@@ -256,22 +479,34 @@ function displayScanResult(data) {
 
       <p>
         <strong>Unique Holders:</strong>
-        ${holders.uniqueOwners || 0}
+        ${formatNumber(
+          holders.uniqueOwners,
+          0
+        )}
       </p>
 
       <p>
         <strong>Top 1:</strong>
-        ${holders.top1Percentage || 0}%
+        ${formatNumber(
+          holders.top1Percentage,
+          2
+        )}%
       </p>
 
       <p>
         <strong>Top 5:</strong>
-        ${holders.top5Percentage || 0}%
+        ${formatNumber(
+          holders.top5Percentage,
+          2
+        )}%
       </p>
 
       <p>
         <strong>Top 10:</strong>
-        ${holders.top10Percentage || 0}%
+        ${formatNumber(
+          holders.top10Percentage,
+          2
+        )}%
       </p>
 
       <hr>
@@ -280,13 +515,7 @@ function displayScanResult(data) {
         ANALYSIS
       </div>
 
-      ${
-        Array.isArray(scanner.analysis)
-          ? scanner.analysis
-              .map(item => `<p>${item}</p>`)
-              .join("")
-          : "<p>No analysis available.</p>"
-      }
+      ${analysisHtml}
 
       <hr>
 
@@ -295,7 +524,9 @@ function displayScanResult(data) {
       </div>
 
       <p style="word-break:break-all;">
-        ${token.address || "-"}
+        ${escapeHtml(
+          token.address || "-"
+        )}
       </p>
 
     </div>
@@ -303,8 +534,132 @@ function displayScanResult(data) {
 }
 
 
-// Run login check when page loads
+// =====================================================
+// FORMAT NUMBER
+// =====================================================
+
+function formatNumber(
+  value,
+  decimals = 0
+) {
+
+  const number =
+    Number(value);
+
+  if (!Number.isFinite(number)) {
+    return "0";
+  }
+
+  return number.toLocaleString(
+    "en-US",
+    {
+      minimumFractionDigits: decimals,
+      maximumFractionDigits: decimals
+    }
+  );
+}
+
+
+// =====================================================
+// FORMAT PRICE
+// =====================================================
+
+function formatPrice(value) {
+
+  const number =
+    Number(value);
+
+  if (
+    !Number.isFinite(number) ||
+    number === 0
+  ) {
+    return "0.0000000000";
+  }
+
+  /*
+    Keep very small token prices readable.
+  */
+
+  if (number < 0.000001) {
+    return number.toFixed(12);
+  }
+
+  if (number < 0.001) {
+    return number.toFixed(10);
+  }
+
+  if (number < 1) {
+    return number.toFixed(8);
+  }
+
+  return number.toFixed(4);
+}
+
+
+// =====================================================
+// ESCAPE HTML
+// =====================================================
+
+function escapeHtml(value) {
+
+  return String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+
+// =====================================================
+// ENTER KEY
+// =====================================================
+
 document.addEventListener(
   "DOMContentLoaded",
-  checkLogin
+  () => {
+
+    checkLogin();
+
+    const passwordInput =
+      document.getElementById(
+        "passwordInput"
+      );
+
+    const tokenInput =
+      document.getElementById(
+        "tokenInput"
+      );
+
+    if (passwordInput) {
+
+      passwordInput.addEventListener(
+        "keydown",
+        event => {
+
+          if (event.key === "Enter") {
+            login();
+          }
+
+        }
+      );
+
+    }
+
+    if (tokenInput) {
+
+      tokenInput.addEventListener(
+        "keydown",
+        event => {
+
+          if (event.key === "Enter") {
+            scanToken();
+          }
+
+        }
+      );
+
+    }
+
+  }
 );
