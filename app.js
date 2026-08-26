@@ -3,7 +3,6 @@
 // =========================
 
 async function login() {
-
   const passwordInput =
     document.getElementById("passwordInput");
 
@@ -18,13 +17,11 @@ async function login() {
     passwordInput.value.trim();
 
   if (!password) {
-
     loginResult.innerHTML = `
       <div class="danger">
         Please enter your password.
       </div>
     `;
-
     return;
   }
 
@@ -35,18 +32,20 @@ async function login() {
   `;
 
   try {
-
     const response =
       await fetch(
-        "/api/login",
+        "/api/login?_t=" +
+        Date.now(),
         {
           method: "POST",
-
           cache: "no-store",
 
           headers: {
-            "Content-Type": "application/json",
-            "Cache-Control": "no-cache"
+            "Content-Type":
+              "application/json",
+
+            "Cache-Control":
+              "no-cache, no-store, max-age=0"
           },
 
           body: JSON.stringify({
@@ -55,36 +54,18 @@ async function login() {
         }
       );
 
-    let data;
-
-    try {
-
-      data =
-        await response.json();
-
-    } catch {
-
-      throw new Error(
-        "Invalid response from server"
-      );
-
-    }
+    const data =
+      await response.json();
 
     if (
       !response.ok ||
       !data.success
     ) {
-
       throw new Error(
         data.error ||
         "Login failed"
       );
-
     }
-
-    // =========================
-    // SIMPLE BROWSER SESSION
-    // =========================
 
     sessionStorage.setItem(
       "scannerAuthenticated",
@@ -98,7 +79,6 @@ async function login() {
     showScanner();
 
   } catch (error) {
-
     loginResult.innerHTML = `
       <div class="danger">
         ❌ ${escapeHtml(
@@ -107,9 +87,7 @@ async function login() {
         )}
       </div>
     `;
-
   }
-
 }
 
 
@@ -118,7 +96,6 @@ async function login() {
 // =========================
 
 function showScanner() {
-
   const loginBox =
     document.getElementById("loginBox");
 
@@ -126,19 +103,12 @@ function showScanner() {
     document.getElementById("scannerBox");
 
   if (loginBox) {
-
-    loginBox.style.display =
-      "none";
-
+    loginBox.style.display = "none";
   }
 
   if (scannerBox) {
-
-    scannerBox.style.display =
-      "block";
-
+    scannerBox.style.display = "block";
   }
-
 }
 
 
@@ -147,7 +117,6 @@ function showScanner() {
 // =========================
 
 function checkLogin() {
-
   const authenticated =
     sessionStorage.getItem(
       "scannerAuthenticated"
@@ -156,11 +125,8 @@ function checkLogin() {
   if (
     authenticated === "true"
   ) {
-
     showScanner();
-
   }
-
 }
 
 
@@ -169,7 +135,6 @@ function checkLogin() {
 // =========================
 
 function extractTokenAddress(input) {
-
   input =
     String(input || "").trim();
 
@@ -177,19 +142,12 @@ function extractTokenAddress(input) {
     return "";
   }
 
-  // Already a contract address
   if (
     !input.includes("http://") &&
     !input.includes("https://")
   ) {
-
     return input;
-
   }
-
-  // =========================
-  // PUMP.FUN
-  // =========================
 
   const pumpMatch =
     input.match(
@@ -197,17 +155,10 @@ function extractTokenAddress(input) {
     );
 
   if (pumpMatch) {
-
     return pumpMatch[1];
-
   }
 
-  // =========================
-  // GENERIC URL FALLBACK
-  // =========================
-
   try {
-
     const url =
       new URL(input);
 
@@ -216,33 +167,22 @@ function extractTokenAddress(input) {
         .split("/")
         .filter(Boolean);
 
-    if (
-      parts.length > 0
-    ) {
-
+    if (parts.length > 0) {
       return parts[
         parts.length - 1
       ];
-
     }
-
-  } catch {
-
-    // Not a valid URL
-
-  }
+  } catch {}
 
   return input;
-
 }
 
 
 // =========================
-// PASTE TOKEN
+// PASTE
 // =========================
 
 async function pasteToken() {
-
   const tokenInput =
     document.getElementById(
       "tokenInput"
@@ -253,20 +193,12 @@ async function pasteToken() {
   }
 
   try {
-
-    // =========================
-    // MODERN CLIPBOARD API
-    // =========================
-
     const text =
       await navigator.clipboard.readText();
 
     if (!text) {
-
       tokenInput.focus();
-
       return;
-
     }
 
     tokenInput.value =
@@ -274,25 +206,21 @@ async function pasteToken() {
 
     tokenInput.focus();
 
-  } catch (error) {
-
+  } catch {
     alert(
       "Unable to access clipboard. Please paste manually."
     );
 
     tokenInput.focus();
-
   }
-
 }
 
 
 // =========================
-// CLEAR SCANNER
+// CLEAR
 // =========================
 
 function clearScanner() {
-
   const tokenInput =
     document.getElementById(
       "tokenInput"
@@ -303,36 +231,25 @@ function clearScanner() {
       "result"
     );
 
-  // Clear input
   if (tokenInput) {
-
     tokenInput.value = "";
-
   }
 
-  // Clear result
   if (result) {
-
     result.innerHTML = "";
-
   }
 
-  // Return cursor
   if (tokenInput) {
-
     tokenInput.focus();
-
   }
-
 }
 
 
 // =========================
-// SCAN TOKEN
+// SCAN
 // =========================
 
 async function scanToken() {
-
   const tokenInput =
     document.getElementById(
       "tokenInput"
@@ -348,91 +265,53 @@ async function scanToken() {
       ".scan-btn"
     );
 
-  if (
-    !tokenInput ||
-    !result
-  ) {
-
+  if (!tokenInput || !result) {
     return;
-
   }
 
   const input =
     tokenInput.value.trim();
 
-  // =========================
-  // EMPTY INPUT
-  // =========================
-
   if (!input) {
-
     result.innerHTML = `
       <div class="card result">
-
         <div class="danger">
           Please enter a Pump.fun link
           or Contract Address.
         </div>
-
       </div>
     `;
 
     tokenInput.focus();
-
     return;
-
   }
 
-  // =========================
-  // EXTRACT CONTRACT
-  // =========================
-
   const token =
-    extractTokenAddress(
-      input
-    );
+    extractTokenAddress(input);
 
   if (!token) {
-
     result.innerHTML = `
       <div class="card result">
-
         <div class="danger">
           Invalid token address.
         </div>
-
       </div>
     `;
 
-    tokenInput.focus();
-
     return;
-
   }
-
-  // =========================
-  // DISABLE SCAN BUTTON
-  // =========================
 
   if (scanButton) {
-
-    scanButton.disabled =
-      true;
-
+    scanButton.disabled = true;
     scanButton.innerHTML =
-      "⏳ Scanning...";
-
+      "⏳ Scanning LIVE...";
   }
-
-  // =========================
-  // SHOW LOADING
-  // =========================
 
   result.innerHTML = `
     <div class="card result">
 
       <div class="small">
-        SCANNING...
+        LIVE SCAN
       </div>
 
       <h2>
@@ -440,24 +319,14 @@ async function scanToken() {
       </h2>
 
       <p>
-        Fetching LIVE market data,
-        trading activity and
-        holder information...
+        Fetching fresh market,
+        trading and holder data...
       </p>
 
     </div>
   `;
 
   try {
-
-    // ==================================================
-    // IMPORTANT
-    // Every scan gets a unique timestamp.
-    //
-    // This prevents browser/CDN cache from returning
-    // the previous result when scanning the SAME token.
-    // ==================================================
-
     const cacheBuster =
       Date.now();
 
@@ -472,7 +341,6 @@ async function scanToken() {
         scanUrl,
         {
           method: "GET",
-
           cache: "no-store",
 
           headers: {
@@ -488,80 +356,41 @@ async function scanToken() {
         }
       );
 
-    let data;
-
-    try {
-
-      data =
-        await response.json();
-
-    } catch {
-
-      throw new Error(
-        "Invalid response from server"
-      );
-
-    }
-
-    // =========================
-    // SERVER ERROR
-    // =========================
+    const data =
+      await response.json();
 
     if (
       !response.ok ||
       !data.success
     ) {
-
       throw new Error(
         data.error ||
         "Scanner error"
       );
-
     }
 
-    // =========================
-    // DISPLAY NEW RESULT
-    // =========================
-
-    displayScanResult(
-      data
-    );
+    displayScanResult(data);
 
   } catch (error) {
-
     result.innerHTML = `
       <div class="card result">
-
         <div class="danger">
-
           ❌ ${escapeHtml(
             error.message ||
             "Scanner error"
           )}
-
         </div>
-
       </div>
     `;
 
   } finally {
-
-    // =========================
-    // ENABLE BUTTON AGAIN
-    // =========================
-
     if (scanButton) {
-
-      scanButton.disabled =
-        false;
+      scanButton.disabled = false;
 
       scanButton.innerHTML =
         "🔍 Scan Token";
-
     }
-
   }
-
 }
 
 
@@ -570,7 +399,6 @@ async function scanToken() {
 // =========================
 
 function displayScanResult(data) {
-
   const result =
     document.getElementById(
       "result"
@@ -595,16 +423,18 @@ function displayScanResult(data) {
   const token =
     data.token || {};
 
-  // =========================
-  // BASIC DATA
-  // =========================
+  const score =
+    Number(
+      scanner.score ?? 0
+    );
 
   const verdict =
     scanner.verdict ||
     "UNKNOWN";
 
-  const score =
-    scanner.score ?? 0;
+  const riskLevel =
+    scanner.riskLevel ||
+    "UNKNOWN";
 
   const tokenName =
     escapeHtml(
@@ -624,12 +454,18 @@ function displayScanResult(data) {
       "-"
     );
 
-  // =========================
-  // CURRENT TIME
-  // =========================
+  let updatedAt =
+    new Date();
 
-  const updatedAt =
-    new Date().toLocaleTimeString(
+  if (data.scannedAt) {
+    updatedAt =
+      new Date(
+        data.scannedAt
+      );
+  }
+
+  const updatedTime =
+    updatedAt.toLocaleTimeString(
       "en-US",
       {
         hour: "2-digit",
@@ -638,17 +474,30 @@ function displayScanResult(data) {
       }
     );
 
-  // =========================
-  // RESULT
-  // =========================
+  const updatedDate =
+    updatedAt.toLocaleDateString(
+      "en-US"
+    );
+
+  const redFlags =
+    Array.isArray(
+      scanner.redFlags
+    )
+      ? scanner.redFlags
+      : [];
+
+  const analysis =
+    Array.isArray(
+      scanner.analysis
+    )
+      ? scanner.analysis
+      : [];
 
   result.innerHTML = `
 
     <div class="card result">
 
-      <!-- =================================
-           TOKEN
-      ================================== -->
+      <!-- TOKEN -->
 
       <div class="small">
         TOKEN
@@ -660,16 +509,18 @@ function displayScanResult(data) {
       </h2>
 
       <p class="small">
-        🔄 Updated: ${updatedAt}
+        🟢 LIVE DATA
+        <br>
+        Updated:
+        ${updatedDate}
+        ${updatedTime}
       </p>
 
 
       <hr>
 
 
-      <!-- =================================
-           SCANNER RESULT
-      ================================== -->
+      <!-- SCORE -->
 
       <div class="small">
         SCANNER RESULT
@@ -684,13 +535,18 @@ function displayScanResult(data) {
         ${score}/100
       </p>
 
+      <p>
+        <strong>Risk:</strong>
+        ${escapeHtml(
+          riskLevel
+        )}
+      </p>
+
 
       <hr>
 
 
-      <!-- =================================
-           MARKET
-      ================================== -->
+      <!-- MARKET -->
 
       <div class="small">
         MARKET
@@ -718,9 +574,37 @@ function displayScanResult(data) {
       </p>
 
       <p>
+        <strong>5M Volume:</strong>
+        $${formatNumber(
+          market.volume5m
+        )}
+      </p>
+
+      <p>
+        <strong>1H Volume:</strong>
+        $${formatNumber(
+          market.volume1h
+        )}
+      </p>
+
+      <p>
         <strong>24H Volume:</strong>
         $${formatNumber(
           market.volume24h
+        )}
+      </p>
+
+      <p>
+        <strong>5M Change:</strong>
+        ${formatPercent(
+          market.priceChange5m
+        )}
+      </p>
+
+      <p>
+        <strong>1H Change:</strong>
+        ${formatPercent(
+          market.priceChange1h
         )}
       </p>
 
@@ -731,29 +615,23 @@ function displayScanResult(data) {
         )}
       </p>
 
+      <p>
+        <strong>Volume/Liquidity:</strong>
+        ${formatNumber(
+          market.volumeLiquidityRatio
+        )}x
+      </p>
+
       ${
-        market.volumeLiquidityRatio !==
+        market.pairAgeMinutes !==
+        null &&
+        market.pairAgeMinutes !==
         undefined
           ? `
             <p>
-              <strong>
-                Volume/Liquidity:
-              </strong>
-              ${formatNumber(
-                market.volumeLiquidityRatio
-              )}x
-            </p>
-          `
-          : ""
-      }
-
-      ${
-        market.dataSource
-          ? `
-            <p class="small">
-              Data:
-              ${escapeHtml(
-                market.dataSource
+              <strong>Pair Age:</strong>
+              ${formatAge(
+                market.pairAgeMinutes
               )}
             </p>
           `
@@ -764,13 +642,25 @@ function displayScanResult(data) {
       <hr>
 
 
-      <!-- =================================
-           TRADING
-      ================================== -->
+      <!-- TRADING -->
 
       <div class="small">
         TRADING
       </div>
+
+      <p>
+        <strong>5M Buys:</strong>
+        ${formatInteger(
+          trading.buys5m
+        )}
+      </p>
+
+      <p>
+        <strong>5M Sells:</strong>
+        ${formatInteger(
+          trading.sells5m
+        )}
+      </p>
 
       <p>
         <strong>1H Buys:</strong>
@@ -787,16 +677,30 @@ function displayScanResult(data) {
       </p>
 
       <p>
-        <strong>Total Trades:</strong>
+        <strong>24H Buys:</strong>
         ${formatInteger(
-          trading.totalTrades
+          trading.buys24h
         )}
       </p>
 
       <p>
-        <strong>Buy Pressure:</strong>
+        <strong>24H Sells:</strong>
+        ${formatInteger(
+          trading.sells24h
+        )}
+      </p>
+
+      <p>
+        <strong>1H Buy Pressure:</strong>
         ${formatPercent(
           trading.buyPressure
+        )}
+      </p>
+
+      <p>
+        <strong>5M Buy Pressure:</strong>
+        ${formatPercent(
+          trading.buyPressure5m
         )}
       </p>
 
@@ -804,16 +708,14 @@ function displayScanResult(data) {
       <hr>
 
 
-      <!-- =================================
-           HOLDERS
-      ================================== -->
+      <!-- HOLDERS -->
 
       <div class="small">
         HOLDERS
       </div>
 
       <p>
-        <strong>Unique Holders:</strong>
+        <strong>Tracked Owners:</strong>
         ${formatInteger(
           holders.uniqueOwners
         )}
@@ -844,25 +746,43 @@ function displayScanResult(data) {
       <hr>
 
 
-      <!-- =================================
-           ANALYSIS
-      ================================== -->
+      <!-- RED FLAGS -->
+
+      <div class="small">
+        🚨 RED FLAGS
+      </div>
+
+      ${
+        redFlags.length > 0
+          ? renderRedFlags(
+              redFlags
+            )
+          : `
+            <p>
+              🟢 No major red flags detected.
+            </p>
+          `
+      }
+
+
+      <hr>
+
+
+      <!-- ANALYSIS -->
 
       <div class="small">
         ANALYSIS
       </div>
 
       ${renderAnalysis(
-        scanner.analysis
+        analysis
       )}
 
 
       <hr>
 
 
-      <!-- =================================
-           CONTRACT
-      ================================== -->
+      <!-- CONTRACT -->
 
       <div class="small">
         CONTRACT ADDRESS
@@ -879,61 +799,122 @@ function displayScanResult(data) {
     </div>
 
   `;
-
 }
 
 
 // =========================
-// RENDER ANALYSIS
+// RED FLAGS
+// =========================
+
+function renderRedFlags(
+  flags
+) {
+  return flags
+    .map(
+      flag => `
+        <p class="danger">
+          🚨 ${escapeHtml(
+            flag
+          )}
+        </p>
+      `
+    )
+    .join("");
+}
+
+
+// =========================
+// ANALYSIS
 // =========================
 
 function renderAnalysis(
   analysis
 ) {
-
   if (
-    !Array.isArray(analysis) ||
+    !Array.isArray(
+      analysis
+    ) ||
     analysis.length === 0
   ) {
-
     return `
       <p>
         No analysis available.
       </p>
     `;
-
   }
 
   return analysis
     .map(
       item => `
         <p>
-          ${escapeHtml(item)}
+          ${escapeHtml(
+            item
+          )}
         </p>
       `
     )
     .join("");
-
 }
 
 
 // =========================
-// FORMAT NUMBER
+// FORMAT AGE
+// =========================
+
+function formatAge(
+  minutes
+) {
+  const number =
+    Number(minutes);
+
+  if (
+    !Number.isFinite(
+      number
+    )
+  ) {
+    return "-";
+  }
+
+  if (number < 60) {
+    return (
+      number.toFixed(1) +
+      " minutes"
+    );
+  }
+
+  const hours =
+    number / 60;
+
+  if (hours < 24) {
+    return (
+      hours.toFixed(1) +
+      " hours"
+    );
+  }
+
+  return (
+    (hours / 24).toFixed(1) +
+    " days"
+  );
+}
+
+
+// =========================
+// NUMBER
 // =========================
 
 function formatNumber(
   value
 ) {
-
   const number =
     Number(value);
 
   if (
-    !Number.isFinite(number)
+    !Number.isFinite(
+      number
+    )
   ) {
-
     return "0";
-
   }
 
   return number.toLocaleString(
@@ -942,27 +923,25 @@ function formatNumber(
       maximumFractionDigits: 2
     }
   );
-
 }
 
 
 // =========================
-// FORMAT INTEGER
+// INTEGER
 // =========================
 
 function formatInteger(
   value
 ) {
-
   const number =
     Number(value);
 
   if (
-    !Number.isFinite(number)
+    !Number.isFinite(
+      number
+    )
   ) {
-
     return "0";
-
   }
 
   return Math.round(
@@ -970,27 +949,25 @@ function formatInteger(
   ).toLocaleString(
     "en-US"
   );
-
 }
 
 
 // =========================
-// FORMAT PERCENT
+// PERCENT
 // =========================
 
 function formatPercent(
   value
 ) {
-
   const number =
     Number(value);
 
   if (
-    !Number.isFinite(number)
+    !Number.isFinite(
+      number
+    )
   ) {
-
     return "0%";
-
   }
 
   return (
@@ -999,62 +976,53 @@ function formatPercent(
       .replace(
         /\.00$/,
         ""
-      ) + "%"
+      ) +
+    "%"
   );
-
 }
 
 
 // =========================
-// FORMAT PRICE
+// PRICE
 // =========================
 
 function formatPrice(
   value
 ) {
-
   const number =
     Number(value);
 
   if (
-    !Number.isFinite(number) ||
+    !Number.isFinite(
+      number
+    ) ||
     number <= 0
   ) {
-
     return "0";
-
   }
 
   if (
     number < 0.00000001
   ) {
-
     return number.toFixed(14);
-
   }
 
   if (
     number < 0.000001
   ) {
-
     return number.toFixed(12);
-
   }
 
   if (
     number < 0.001
   ) {
-
     return number.toFixed(9);
-
   }
 
   if (
     number < 1
   ) {
-
     return number.toFixed(6);
-
   }
 
   return number.toLocaleString(
@@ -1064,7 +1032,6 @@ function formatPrice(
       maximumFractionDigits: 6
     }
   );
-
 }
 
 
@@ -1075,7 +1042,6 @@ function formatPrice(
 function escapeHtml(
   value
 ) {
-
   const div =
     document.createElement(
       "div"
@@ -1087,16 +1053,14 @@ function escapeHtml(
     );
 
   return div.innerHTML;
-
 }
 
 
 // =========================
-// ENTER KEY SUPPORT
+// KEYBOARD
 // =========================
 
 function setupKeyboardEvents() {
-
   const tokenInput =
     document.getElementById(
       "tokenInput"
@@ -1107,56 +1071,35 @@ function setupKeyboardEvents() {
       "passwordInput"
     );
 
-  // =========================
-  // ENTER = LOGIN
-  // =========================
-
   if (passwordInput) {
-
     passwordInput.addEventListener(
       "keydown",
       event => {
-
         if (
-          event.key === "Enter"
+          event.key ===
+          "Enter"
         ) {
-
           event.preventDefault();
-
           login();
-
         }
-
       }
     );
-
   }
 
-  // =========================
-  // ENTER = SCAN
-  // =========================
-
   if (tokenInput) {
-
     tokenInput.addEventListener(
       "keydown",
       event => {
-
         if (
-          event.key === "Enter"
+          event.key ===
+          "Enter"
         ) {
-
           event.preventDefault();
-
           scanToken();
-
         }
-
       }
     );
-
   }
-
 }
 
 
@@ -1167,10 +1110,7 @@ function setupKeyboardEvents() {
 document.addEventListener(
   "DOMContentLoaded",
   () => {
-
     checkLogin();
-
     setupKeyboardEvents();
-
   }
 );
