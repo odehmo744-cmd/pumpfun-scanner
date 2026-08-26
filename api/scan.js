@@ -1,38 +1,39 @@
-export default async function handler(request) {
-  const url = new URL(request.url);
-  const token = url.searchParams.get("token");
-
-  if (!token) {
-    return Response.json(
-      { error: "Missing token address" },
-      { status: 400 }
-    );
-  }
-
+export default async function handler(req, res) {
   try {
-    const response = await fetch(
-      `https://api.dexscreener.com/tokens/v1/solana/${encodeURIComponent(token)}`,
-      {
-        headers: {
-          "Accept": "application/json"
-        }
-      }
-    );
+    const token = new URL(req.url).searchParams.get("token");
+
+    if (!token) {
+      return res.status(400).json({
+        success: false,
+        error: "Missing token address"
+      });
+    }
+
+    const apiUrl =
+      "https://api.dexscreener.com/tokens/v1/solana/" +
+      encodeURIComponent(token);
+
+    const response = await fetch(apiUrl);
+
+    if (!response.ok) {
+      return res.status(response.status).json({
+        success: false,
+        error: "DEX Screener returned HTTP " + response.status
+      });
+    }
 
     const data = await response.json();
 
-    return Response.json({
+    return res.status(200).json({
       success: true,
-      data: data
+      token: token,
+      pairs: data
     });
 
   } catch (error) {
-    return Response.json(
-      {
-        success: false,
-        error: error.message
-      },
-      { status: 500 }
-    );
+    return res.status(500).json({
+      success: false,
+      error: String(error)
+    });
   }
 }
