@@ -1,16 +1,12 @@
-// =====================================================
-// LOGIN
-// =====================================================
-
 async function login() {
-  const passwordInput =
-    document.getElementById("passwordInput");
+  const password =
+    document
+      .getElementById("passwordInput")
+      .value
+      .trim();
 
   const loginResult =
     document.getElementById("loginResult");
-
-  const password =
-    passwordInput.value.trim();
 
   if (!password) {
     loginResult.innerHTML = `
@@ -28,134 +24,106 @@ async function login() {
   `;
 
   try {
-    const response = await fetch("/api/login", {
-      method: "POST",
-      credentials: "same-origin",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        password
-      })
-    });
+    const response = await fetch(
+      "/api/login",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          password
+        })
+      }
+    );
 
-    const data = await response.json();
+    const data =
+      await response.json();
 
-    if (!response.ok || !data.success) {
+    if (
+      !response.ok ||
+      !data.success
+    ) {
       throw new Error(
-        data.error || "Login failed"
+        data.error ||
+        "Login failed"
       );
     }
 
-    // IMPORTANT:
-    // Authentication is stored in the HttpOnly cookie
-    // created by /api/login.
-    // We DO NOT store the password or authentication
-    // state in localStorage/sessionStorage.
+    /*
+      Simple login.
+      No SCANNER_AUTH_SECRET.
+      No cookies.
+      No session expiration.
+    */
 
-    passwordInput.value = "";
+    sessionStorage.setItem(
+      "scannerAuthenticated",
+      "true"
+    );
 
-    document.getElementById("loginBox").style.display =
-      "none";
-
-    document.getElementById("scannerBox").style.display =
-      "block";
-
-    loginResult.innerHTML = "";
+    showScanner();
 
   } catch (error) {
     loginResult.innerHTML = `
       <div class="danger">
-        ❌ ${escapeHtml(error.message)}
+        ❌ ${error.message}
       </div>
     `;
   }
 }
 
 
-// =====================================================
-// CHECK LOGIN
-// =====================================================
+// =========================
+// SHOW SCANNER
+// =========================
 
-async function checkLogin() {
-  /*
-    We cannot directly read the HttpOnly cookie from
-    JavaScript — and that's intentional.
+function showScanner() {
+  document.getElementById(
+    "loginBox"
+  ).style.display = "none";
 
-    Instead, we test the protected API.
-  */
+  document.getElementById(
+    "scannerBox"
+  ).style.display = "block";
+}
 
-  try {
-    const response = await fetch(
-      "/api/scan?token=11111111111111111111111111111111",
-      {
-        method: "GET",
-        credentials: "same-origin"
-      }
+
+// =========================
+// LOGIN CHECK
+// =========================
+
+function checkLogin() {
+  const authenticated =
+    sessionStorage.getItem(
+      "scannerAuthenticated"
     );
 
-    /*
-      401 = not authenticated.
-      Any other response means the authentication
-      cookie was accepted by the server.
-
-      We don't actually need valid token data here.
-    */
-
-    if (response.status !== 401) {
-      document.getElementById("loginBox").style.display =
-        "none";
-
-      document.getElementById("scannerBox").style.display =
-        "block";
-    } else {
-      document.getElementById("loginBox").style.display =
-        "block";
-
-      document.getElementById("scannerBox").style.display =
-        "none";
-    }
-
-  } catch (error) {
-    // If the check fails, show login screen.
-    document.getElementById("loginBox").style.display =
-      "block";
-
-    document.getElementById("scannerBox").style.display =
-      "none";
+  if (
+    authenticated === "true"
+  ) {
+    showScanner();
   }
 }
 
 
-// =====================================================
-// EXTRACT TOKEN ADDRESS
-// =====================================================
+// =========================
+// TOKEN EXTRACTION
+// =========================
 
 function extractTokenAddress(input) {
   input = input.trim();
 
-  if (!input) {
-    return "";
-  }
-
-  /*
-    If user pasted only the contract address
-  */
-  if (!input.includes("http")) {
+  if (
+    !input.includes("http")
+  ) {
     return input;
   }
 
-  /*
-    Supports:
-
-    https://pump.fun/coin/ADDRESS
-    https://pump.fun/ADDRESS
-    https://www.pump.fun/coin/ADDRESS
-  */
-
-  const match = input.match(
-    /pump\.fun\/(?:coin\/)?([^/?#]+)/i
-  );
+  const match =
+    input.match(
+      /pump\.fun\/(?:coin\/)?([^/?]+)/i
+    );
 
   if (match) {
     return match[1];
@@ -165,20 +133,23 @@ function extractTokenAddress(input) {
 }
 
 
-// =====================================================
-// SCAN TOKEN
-// =====================================================
+// =========================
+// SCAN
+// =========================
 
 async function scanToken() {
-
   const input =
     document
-      .getElementById("tokenInput")
+      .getElementById(
+        "tokenInput"
+      )
       .value
       .trim();
 
   const result =
-    document.getElementById("result");
+    document.getElementById(
+      "result"
+    );
 
   if (!input) {
     result.innerHTML = `
@@ -188,29 +159,16 @@ async function scanToken() {
         </div>
       </div>
     `;
-
     return;
   }
 
   const token =
     extractTokenAddress(input);
 
-  if (!token) {
-    result.innerHTML = `
-      <div class="card">
-        <div class="danger">
-          Invalid token address.
-        </div>
-      </div>
-    `;
-
-    return;
-  }
-
   result.innerHTML = `
     <div class="card">
       <div class="small">
-        SCANNER
+        SCANNING...
       </div>
 
       <h2>
@@ -224,62 +182,32 @@ async function scanToken() {
   `;
 
   try {
-
-    /*
-      credentials: "same-origin" is important.
-
-      The browser automatically sends the HttpOnly
-      scanner_auth cookie with this request.
-    */
-
     const response =
       await fetch(
-        `/api/scan?token=${encodeURIComponent(token)}`,
-        {
-          method: "GET",
-          credentials: "same-origin"
-        }
+        "/api/scan?token=" +
+        encodeURIComponent(token)
       );
 
     const data =
       await response.json();
 
-    /*
-      If authentication expired or the user doesn't
-      have access anymore.
-    */
-
-    if (response.status === 401) {
-
-      document.getElementById("loginBox").style.display =
-        "block";
-
-      document.getElementById("scannerBox").style.display =
-        "none";
-
-      result.innerHTML = "";
-
-      alert(
-        "Your session has expired. Please login again."
-      );
-
-      return;
-    }
-
-    if (!response.ok || !data.success) {
+    if (
+      !response.ok ||
+      !data.success
+    ) {
       throw new Error(
-        data.error || "Scanner error"
+        data.error ||
+        "Scanner error"
       );
     }
 
     displayScanResult(data);
 
   } catch (error) {
-
     result.innerHTML = `
       <div class="card">
         <div class="danger">
-          ❌ ${escapeHtml(error.message)}
+          ❌ ${error.message}
         </div>
       </div>
     `;
@@ -287,14 +215,16 @@ async function scanToken() {
 }
 
 
-// =====================================================
-// DISPLAY SCANNER RESULT
-// =====================================================
+// =========================
+// DISPLAY RESULT
+// =========================
 
 function displayScanResult(data) {
 
   const result =
-    document.getElementById("result");
+    document.getElementById(
+      "result"
+    );
 
   const market =
     data.market || {};
@@ -312,44 +242,11 @@ function displayScanResult(data) {
     data.token || {};
 
   const verdict =
-    scanner.verdict || "UNKNOWN";
+    scanner.verdict ||
+    "UNKNOWN";
 
   const score =
     scanner.score ?? 0;
-
-  const analysis =
-    Array.isArray(scanner.analysis)
-      ? scanner.analysis
-      : [];
-
-
-  // ===================================================
-  // ANALYSIS HTML
-  // ===================================================
-
-  const analysisHtml =
-    analysis.length > 0
-
-      ? analysis
-          .map(
-            item => `
-              <p>
-                ${escapeHtml(String(item))}
-              </p>
-            `
-          )
-          .join("")
-
-      : `
-          <p>
-            No analysis available.
-          </p>
-        `;
-
-
-  // ===================================================
-  // RESULT
-  // ===================================================
 
   result.innerHTML = `
 
@@ -360,12 +257,8 @@ function displayScanResult(data) {
       </div>
 
       <h2>
-        ${escapeHtml(
-          token.name || "Unknown"
-        )}
-        (${escapeHtml(
-          token.symbol || "-"
-        )})
+        ${token.name || "Unknown"}
+        (${token.symbol || "-"})
       </h2>
 
       <hr>
@@ -375,12 +268,12 @@ function displayScanResult(data) {
       </div>
 
       <h2>
-        ${escapeHtml(verdict)}
+        ${verdict}
       </h2>
 
       <p>
         <strong>Score:</strong>
-        ${Number(score)}/100
+        ${score}/100
       </p>
 
       <hr>
@@ -419,18 +312,11 @@ function displayScanResult(data) {
 
       <p>
         <strong>24H Change:</strong>
-        ${formatNumber(
-          market.priceChange24h,
-          2
-        )}%
+        ${market.priceChange24h || 0}%
       </p>
 
-      <p>
-        <strong>Volume / Liquidity:</strong>
-        ${formatNumber(
-          market.volumeLiquidityRatio,
-          2
-        )}x
+      <p class="small">
+        Data: ${market.dataSource || "-"}
       </p>
 
       <hr>
@@ -441,34 +327,22 @@ function displayScanResult(data) {
 
       <p>
         <strong>1H Buys:</strong>
-        ${formatNumber(
-          trading.buys1h,
-          0
-        )}
+        ${trading.buys1h || 0}
       </p>
 
       <p>
         <strong>1H Sells:</strong>
-        ${formatNumber(
-          trading.sells1h,
-          0
-        )}
+        ${trading.sells1h || 0}
       </p>
 
       <p>
         <strong>Total Trades:</strong>
-        ${formatNumber(
-          trading.totalTrades,
-          0
-        )}
+        ${trading.totalTrades || 0}
       </p>
 
       <p>
         <strong>Buy Pressure:</strong>
-        ${formatNumber(
-          trading.buyPressure,
-          2
-        )}%
+        ${trading.buyPressure || 0}%
       </p>
 
       <hr>
@@ -479,34 +353,22 @@ function displayScanResult(data) {
 
       <p>
         <strong>Unique Holders:</strong>
-        ${formatNumber(
-          holders.uniqueOwners,
-          0
-        )}
+        ${holders.uniqueOwners || 0}
       </p>
 
       <p>
         <strong>Top 1:</strong>
-        ${formatNumber(
-          holders.top1Percentage,
-          2
-        )}%
+        ${holders.top1Percentage || 0}%
       </p>
 
       <p>
         <strong>Top 5:</strong>
-        ${formatNumber(
-          holders.top5Percentage,
-          2
-        )}%
+        ${holders.top5Percentage || 0}%
       </p>
 
       <p>
         <strong>Top 10:</strong>
-        ${formatNumber(
-          holders.top10Percentage,
-          2
-        )}%
+        ${holders.top10Percentage || 0}%
       </p>
 
       <hr>
@@ -515,7 +377,18 @@ function displayScanResult(data) {
         ANALYSIS
       </div>
 
-      ${analysisHtml}
+      ${
+        Array.isArray(
+          scanner.analysis
+        )
+          ? scanner.analysis
+              .map(
+                item =>
+                  `<p>${item}</p>`
+              )
+              .join("")
+          : "<p>No analysis available.</p>"
+      }
 
       <hr>
 
@@ -523,10 +396,12 @@ function displayScanResult(data) {
         CONTRACT ADDRESS
       </div>
 
-      <p style="word-break:break-all;">
-        ${escapeHtml(
-          token.address || "-"
-        )}
+      <p
+        style="
+          word-break:break-all;
+        "
+      >
+        ${token.address || "-"}
       </p>
 
     </div>
@@ -534,132 +409,56 @@ function displayScanResult(data) {
 }
 
 
-// =====================================================
+// =========================
 // FORMAT NUMBER
-// =====================================================
+// =========================
 
-function formatNumber(
-  value,
-  decimals = 0
-) {
-
+function formatNumber(value) {
   const number =
-    Number(value);
-
-  if (!Number.isFinite(number)) {
-    return "0";
-  }
+    Number(value || 0);
 
   return number.toLocaleString(
     "en-US",
     {
-      minimumFractionDigits: decimals,
-      maximumFractionDigits: decimals
+      maximumFractionDigits: 2
     }
   );
 }
 
 
-// =====================================================
+// =========================
 // FORMAT PRICE
-// =====================================================
+// =========================
 
 function formatPrice(value) {
-
   const number =
-    Number(value);
+    Number(value || 0);
 
-  if (
-    !Number.isFinite(number) ||
-    number === 0
-  ) {
-    return "0.0000000000";
+  if (!number) {
+    return "0";
   }
-
-  /*
-    Keep very small token prices readable.
-  */
 
   if (number < 0.000001) {
     return number.toFixed(12);
   }
 
   if (number < 0.001) {
-    return number.toFixed(10);
+    return number.toFixed(9);
   }
 
   if (number < 1) {
-    return number.toFixed(8);
+    return number.toFixed(6);
   }
 
   return number.toFixed(4);
 }
 
 
-// =====================================================
-// ESCAPE HTML
-// =====================================================
-
-function escapeHtml(value) {
-
-  return String(value)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
-}
-
-
-// =====================================================
-// ENTER KEY
-// =====================================================
+// =========================
+// PAGE LOAD
+// =========================
 
 document.addEventListener(
   "DOMContentLoaded",
-  () => {
-
-    checkLogin();
-
-    const passwordInput =
-      document.getElementById(
-        "passwordInput"
-      );
-
-    const tokenInput =
-      document.getElementById(
-        "tokenInput"
-      );
-
-    if (passwordInput) {
-
-      passwordInput.addEventListener(
-        "keydown",
-        event => {
-
-          if (event.key === "Enter") {
-            login();
-          }
-
-        }
-      );
-
-    }
-
-    if (tokenInput) {
-
-      tokenInput.addEventListener(
-        "keydown",
-        event => {
-
-          if (event.key === "Enter") {
-            scanToken();
-          }
-
-        }
-      );
-
-    }
-
-  }
+  checkLogin
 );
