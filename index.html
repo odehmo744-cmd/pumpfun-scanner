@@ -1,125 +1,24 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
+<div class="button-group">
 
-  <meta
-    name="viewport"
-    content="width=device-width, initial-scale=1.0"
+  <button
+    class="scan-btn"
+    onclick="scanToken()"
   >
+    🔍 Scan Token
+  </button>
 
-  <title>Pump.fun Scanner</title>
+  <button
+    class="paste-btn"
+    onclick="pasteToken()"
+  >
+    📋 Paste
+  </button>
 
-  <link rel="stylesheet" href="style.css">
-</head>
+  <button
+    class="clear-btn"
+    onclick="clearScanner()"
+  >
+    ✖ Clear
+  </button>
 
-<body>
-
-  <!-- Animated Background -->
-  <div class="background">
-    <div class="orb orb1"></div>
-    <div class="orb orb2"></div>
-    <div class="orb orb3"></div>
-  </div>
-
-  <div class="container">
-
-    <div class="header">
-
-      <h1>🚀 Pump.fun Scanner</h1>
-
-      <p class="subtitle">
-        Advanced Solana Token Analysis
-      </p>
-
-    </div>
-
-
-    <!-- LOGIN -->
-
-    <div
-      id="loginBox"
-      class="card glass"
-    >
-
-      <h2>🔐 Private Scanner</h2>
-
-      <p class="subtitle">
-        Enter your password to continue.
-      </p>
-
-      <input
-        id="passwordInput"
-        type="password"
-        placeholder="Enter password"
-        autocomplete="off"
-      >
-
-      <button
-        class="login-btn"
-        onclick="login()"
-      >
-        🔓 Login
-      </button>
-
-      <div id="loginResult"></div>
-
-    </div>
-
-
-    <!-- SCANNER -->
-
-    <div
-      id="scannerBox"
-      style="display:none;"
-    >
-
-      <div class="card glass scanner-card">
-
-        <div class="input-group">
-
-          <input
-            id="tokenInput"
-            type="text"
-            placeholder="Paste Pump.fun link or Contract Address"
-            autocomplete="off"
-          >
-
-        </div>
-
-
-        <div class="button-group">
-
-          <button
-            class="scan-btn"
-            onclick="scanToken()"
-          >
-            🔍 Scan Token
-          </button>
-
-
-          <button
-            class="clear-btn"
-            onclick="clearScanner()"
-          >
-            ✖ Clear
-          </button>
-
-        </div>
-
-      </div>
-
-
-      <!-- RESULT -->
-
-      <div id="result"></div>
-
-    </div>
-
-  </div>
-
-
-  <script src="app.js"></script>
-
-</body>
-</html>
+</div>
