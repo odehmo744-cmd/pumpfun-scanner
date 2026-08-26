@@ -1,6 +1,6 @@
 export default async function handler(req, res) {
   try {
-    const token = new URL(req.url).searchParams.get("token");
+    const token = req.query?.token;
 
     if (!token) {
       return res.status(400).json({
