@@ -1,6 +1,7 @@
 export default async function handler(req, res) {
   try {
     const token = req.query?.token;
+    const apiKey = process.env.HELIUS_API_KEY;
 
     if (!token) {
       return res.status(400).json({
@@ -9,9 +10,7 @@ export default async function handler(req, res) {
       });
     }
 
-    const heliusKey = process.env.HELIUS_API_KEY;
-
-    if (!heliusKey) {
+    if (!apiKey) {
       return res.status(500).json({
         success: false,
         error: "HELIUS_API_KEY is not configured"
@@ -20,9 +19,10 @@ export default async function handler(req, res) {
 
     const rpcUrl =
       "https://mainnet.helius-rpc.com/?api-key=" +
-      encodeURIComponent(heliusKey);
+      encodeURIComponent(apiKey);
 
-    const response = await fetch(rpcUrl, {
+    // Find the earliest transaction involving the token.
+    const historyResponse = await fetch(rpcUrl, {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
@@ -30,91 +30,131 @@ export default async function handler(req, res) {
       body: JSON.stringify({
         jsonrpc: "2.0",
         id: 1,
-        method: "getTransactionsForAddress",
+        method: "getSignaturesForAddress",
         params: [
           token,
           {
-            transactionDetails: "full",
-            sortOrder: "asc",
-            limit: 20
+            limit: 1000
           }
         ]
       })
     });
 
-    const data = await response.json();
+    const history = await historyResponse.json();
 
-    if (!response.ok || data.error) {
+    if (!historyResponse.ok || history.error) {
       return res.status(502).json({
         success: false,
         error:
-          data.error?.message ||
-          "Helius transaction request failed"
+          history.error?.message ||
+          "Failed to get token history"
       });
     }
 
-    const transactions =
-      data.result?.data || [];
+    const signatures =
+      history.result || [];
 
-    const simplified = transactions.map((tx) => {
+    if (!signatures.length) {
+      return res.status(404).json({
+        success: false,
+        error: "No transactions found"
+      });
+    }
 
-      const transaction = tx.transaction || {};
+    // getSignaturesForAddress returns newest first.
+    // Reverse to inspect the oldest transactions first.
+    const oldest = [
+      ...signatures
+    ].reverse();
 
-      const message =
-        transaction.message || {};
+    const firstSignature =
+      oldest[0].signature;
 
-      const accountKeys =
-        message.accountKeys || [];
-
-      const feePayer =
-        accountKeys.find(
-          (account) =>
-            account.signer === true
-        )?.pubkey || null;
-
-      return {
-        signature:
-          tx.signature ||
-          tx.transaction?.signatures?.[0] ||
-          null,
-
-        slot:
-          tx.slot || null,
-
-        blockTime:
-          tx.blockTime || null,
-
-        feePayer,
-
-        success:
-          tx.meta?.err == null,
-
-        instructions:
-          message.instructions?.length || 0
-      };
+    // Fetch the actual transaction from Solana RPC.
+    const txResponse = await fetch(rpcUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        id: 2,
+        method: "getTransaction",
+        params: [
+          firstSignature,
+          {
+            encoding: "jsonParsed",
+            commitment: "confirmed",
+            maxSupportedTransactionVersion: 0
+          }
+        ]
+      })
     });
+
+    const txData =
+      await txResponse.json();
+
+    if (!txResponse.ok || txData.error) {
+      return res.status(502).json({
+        success: false,
+        error:
+          txData.error?.message ||
+          "Failed to fetch transaction"
+      });
+    }
+
+    const tx =
+      txData.result;
+
+    if (!tx) {
+      return res.status(404).json({
+        success: false,
+        error: "Transaction not found",
+        signature: firstSignature
+      });
+    }
+
+    const message =
+      tx.transaction?.message;
+
+    const accountKeys =
+      message?.accountKeys || [];
+
+    const signers =
+      accountKeys
+        .filter(account => account.signer === true)
+        .map(account => ({
+          address: account.pubkey,
+          writable: account.writable
+        }));
 
     return res.status(200).json({
       success: true,
 
       token,
 
-      transactionCount:
-        simplified.length,
+      firstTransaction: {
+        signature: firstSignature,
+        slot: tx.slot || null,
+        blockTime: tx.blockTime || null,
+        feeLamports: tx.meta?.fee || 0,
 
-      firstTransaction:
-        simplified[0] || null,
+        signers,
 
-      transactions:
-        simplified
+        accounts: accountKeys.map(
+          account => ({
+            address: account.pubkey,
+            signer: account.signer,
+            writable: account.writable
+          })
+        )
+      }
     });
 
   } catch (error) {
-
     return res.status(500).json({
       success: false,
       error: String(error)
     });
-
   }
 }
