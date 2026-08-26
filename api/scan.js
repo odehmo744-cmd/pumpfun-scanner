@@ -71,10 +71,20 @@ export default async function handler(req, res) {
         })
       });
 
-      const data = await response.json();
+      let data;
+
+      try {
+        data = await response.json();
+      } catch {
+        throw new Error(
+          `Invalid RPC response: ${method}`
+        );
+      }
 
       if (!response.ok) {
-        throw new Error(`RPC HTTP ${response.status}`);
+        throw new Error(
+          `RPC HTTP ${response.status}`
+        );
       }
 
       if (data.error) {
@@ -294,14 +304,19 @@ export default async function handler(req, res) {
         scannedAt + 1
       );
 
+    const supplyValue =
+      supplyResult?.value || {};
+
     const supply =
       Number(
-        supplyResult?.value?.uiAmount || 0
+        supplyValue?.uiAmountString ??
+        supplyValue?.uiAmount ??
+        0
       );
 
     const decimals =
       Number(
-        supplyResult?.value?.decimals || 0
+        supplyValue?.decimals || 0
       );
 
     // ==================================================
@@ -357,21 +372,40 @@ export default async function handler(req, res) {
       );
 
     const largestAccounts =
-      largestResult?.value || [];
+      Array.isArray(
+        largestResult?.value
+      )
+        ? largestResult.value
+        : [];
 
     const addresses =
-      largestAccounts.map(
-        account =>
-          account.address
-      );
+      largestAccounts
+        .map(
+          account =>
+            account?.address
+        )
+        .filter(Boolean);
 
     // ==================================================
     // OWNERS
+    //
+    // IMPORTANT:
+    // getMultipleAccounts RETURNS:
+    //
+    // {
+    //   value: [...]
+    // }
+    //
+    // The previous version was using the entire
+    // result directly as an array.
+    // That caused ownerAccounts[index] to be undefined
+    // and therefore HOLDERS = 0.
     // ==================================================
 
     let ownerAccounts = [];
 
     if (addresses.length > 0) {
+
       const ownerAccountsResult =
         await rpc(
           "getMultipleAccounts",
@@ -385,16 +419,12 @@ export default async function handler(req, res) {
           scannedAt + 4
         );
 
-      // IMPORTANT:
-      // getMultipleAccounts returns:
-      // { value: [...] }
-      //
-      // The previous version assigned the
-      // entire result directly to ownerAccounts,
-      // causing ownerAccounts[index] to be undefined.
-
       ownerAccounts =
-        ownerAccountsResult?.value || [];
+        Array.isArray(
+          ownerAccountsResult?.value
+        )
+          ? ownerAccountsResult.value
+          : [];
     }
 
     // ==================================================
@@ -410,20 +440,26 @@ export default async function handler(req, res) {
         const accountInfo =
           ownerAccounts[index];
 
-        const owner =
+        const parsedInfo =
           accountInfo
             ?.data
             ?.parsed
-            ?.info
-            ?.owner;
+            ?.info;
+
+        const owner =
+          parsedInfo?.owner ||
+          null;
 
         const amount =
           Number(
-            account?.uiAmount || 0
+            account?.uiAmountString ??
+            account?.uiAmount ??
+            0
           );
 
         if (
           !owner ||
+          !Number.isFinite(amount) ||
           amount <= 0
         ) {
           return;
@@ -438,6 +474,10 @@ export default async function handler(req, res) {
         );
       }
     );
+
+    // ==================================================
+    // HOLDERS ARRAY
+    // ==================================================
 
     const holders =
       Array.from(
@@ -547,6 +587,7 @@ export default async function handler(req, res) {
     let enhancedTransactions = [];
 
     try {
+
       const txUrl =
         "https://api.helius.xyz/v0/addresses/" +
         encodeURIComponent(token) +
@@ -568,18 +609,24 @@ export default async function handler(req, res) {
         );
 
       if (txResponse.ok) {
+
         const txData =
           await txResponse.json();
 
         if (
           Array.isArray(txData)
         ) {
+
           enhancedTransactions =
             txData;
+
         }
       }
+
     } catch {
+
       enhancedTransactions = [];
+
     }
 
     // ==================================================
@@ -684,6 +731,7 @@ export default async function handler(req, res) {
 
         if (
           !to ||
+          !Number.isFinite(amount) ||
           amount <= 0
         ) {
           continue;
@@ -729,8 +777,11 @@ export default async function handler(req, res) {
           const existing =
             firstBuyerMap.get(to);
 
-          existing.amount += amount;
-          existing.transactions += 1;
+          existing.amount +=
+            amount;
+
+          existing.transactions +=
+            1;
         }
       }
     }
@@ -1152,6 +1203,7 @@ export default async function handler(req, res) {
 
     let score = 0;
 
+    // Liquidity: 20
     if (
       liquidity >= 100000
     ) {
@@ -1177,6 +1229,7 @@ export default async function handler(req, res) {
       score += 7;
     }
 
+    // Volume: 15
     if (
       volumeLiquidityRatio >= 10 &&
       volumeLiquidityRatio <= 40
@@ -1203,6 +1256,7 @@ export default async function handler(req, res) {
       score += 4;
     }
 
+    // Buy pressure: 15
     if (
       buyPressure >= 60
     ) {
@@ -1228,6 +1282,7 @@ export default async function handler(req, res) {
       score += 5;
     }
 
+    // Momentum: 10
     if (
       priceChange24h >= 20 &&
       priceChange24h <= 500
@@ -1261,6 +1316,7 @@ export default async function handler(req, res) {
       score += 3;
     }
 
+    // Top holder: 10
     if (
       top1Percentage <= 10
     ) {
@@ -1280,6 +1336,7 @@ export default async function handler(req, res) {
       score += 5;
     }
 
+    // Top 5: 10
     if (
       top5Percentage <= 30
     ) {
@@ -1299,6 +1356,7 @@ export default async function handler(req, res) {
       score += 3;
     }
 
+    // Holder distribution: 10
     if (
       uniqueOwners >= 100
     ) {
@@ -1322,6 +1380,7 @@ export default async function handler(req, res) {
       score += 2;
     }
 
+    // Trading activity: 10
     if (
       totalTrades >= 2000
     ) {
@@ -1347,6 +1406,7 @@ export default async function handler(req, res) {
       score += 2;
     }
 
+    // Creator penalty
     if (
       devHoldingPercentage > 30
     ) {
@@ -1366,6 +1426,7 @@ export default async function handler(req, res) {
       score -= 5;
     }
 
+    // First buyer concentration penalty
     if (
       firstBuyerPercentage > 30
     ) {
@@ -1379,6 +1440,7 @@ export default async function handler(req, res) {
       score -= 5;
     }
 
+    // Active authorities penalty
     if (mintAuthority) {
       score -= 5;
     }
@@ -1668,8 +1730,24 @@ export default async function handler(req, res) {
       holderAccounts:
         holders.length,
 
+      holderAccountsScanned:
+        addresses.length,
+
+      holderOwnersResolved:
+        ownerAccounts.filter(
+          Boolean
+        ).length,
+
+      holderSource:
+        holders.length > 0
+          ? "Helius RPC"
+          : "-",
+
+      holdersDetected:
+        holders.length > 0,
+
       note:
-        "Some creator and first-buyer fields may be unavailable for very new tokens or incomplete transaction history."
+        "Holder distribution is based on the largest token accounts returned by Solana RPC. Creator and first-buyer fields may be unavailable for very new tokens or incomplete transaction history."
     };
 
     // ==================================================
@@ -1832,6 +1910,19 @@ export default async function handler(req, res) {
         whale5,
 
         uniqueOwners,
+
+        accountsScanned:
+          addresses.length,
+
+        ownersResolved:
+          ownerAccounts.filter(
+            Boolean
+          ).length,
+
+        dataSource:
+          holders.length > 0
+            ? "Helius RPC"
+            : "-",
 
         mintAuthority,
 
