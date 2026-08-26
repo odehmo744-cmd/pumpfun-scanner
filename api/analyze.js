@@ -21,8 +21,8 @@ export default async function handler(req, res) {
       "https://mainnet.helius-rpc.com/?api-key=" +
       encodeURIComponent(apiKey);
 
-    // Find the earliest transaction involving the token.
-    const historyResponse = await fetch(rpcUrl, {
+    // 1. Get token metadata
+    const assetResponse = await fetch(rpcUrl, {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
@@ -30,6 +30,55 @@ export default async function handler(req, res) {
       body: JSON.stringify({
         jsonrpc: "2.0",
         id: 1,
+        method: "getAsset",
+        params: {
+          id: token,
+          displayOptions: {
+            showFungible: true
+          }
+        }
+      })
+    });
+
+    const assetData = await assetResponse.json();
+
+    if (!assetResponse.ok || assetData.error) {
+      return res.status(502).json({
+        success: false,
+        error:
+          assetData.error?.message ||
+          "Failed to get token asset data"
+      });
+    }
+
+    const asset = assetData.result || {};
+
+    // Try all known creator locations
+    const creators =
+      asset.creators ||
+      asset.content?.creators ||
+      [];
+
+    const creatorCandidates = creators.map(c => ({
+      address:
+        c.address ||
+        c.pubkey ||
+        null,
+      verified:
+        c.verified ?? null,
+      share:
+        c.share ?? null
+    }));
+
+    // 2. Get earliest signatures
+    const historyResponse = await fetch(rpcUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        id: 2,
         method: "getSignaturesForAddress",
         params: [
           token,
@@ -54,104 +103,118 @@ export default async function handler(req, res) {
     const signatures =
       history.result || [];
 
-    if (!signatures.length) {
-      return res.status(404).json({
-        success: false,
-        error: "No transactions found"
-      });
-    }
-
-    // getSignaturesForAddress returns newest first.
-    // Reverse to inspect the oldest transactions first.
-    const oldest = [
-      ...signatures
-    ].reverse();
+    const oldest =
+      [...signatures].reverse();
 
     const firstSignature =
-      oldest[0].signature;
+      oldest[0]?.signature || null;
 
-    // Fetch the actual transaction from Solana RPC.
-    const txResponse = await fetch(rpcUrl, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        jsonrpc: "2.0",
-        id: 2,
-        method: "getTransaction",
-        params: [
-          firstSignature,
-          {
-            encoding: "jsonParsed",
-            commitment: "confirmed",
-            maxSupportedTransactionVersion: 0
-          }
-        ]
-      })
-    });
+    let firstTransaction = null;
 
-    const txData =
-      await txResponse.json();
+    // 3. Inspect earliest transaction
+    if (firstSignature) {
 
-    if (!txResponse.ok || txData.error) {
-      return res.status(502).json({
-        success: false,
-        error:
-          txData.error?.message ||
-          "Failed to fetch transaction"
+      const txResponse = await fetch(rpcUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          jsonrpc: "2.0",
+          id: 3,
+          method: "getTransaction",
+          params: [
+            firstSignature,
+            {
+              encoding: "jsonParsed",
+              commitment: "confirmed",
+              maxSupportedTransactionVersion: 0
+            }
+          ]
+        })
       });
+
+      const txData =
+        await txResponse.json();
+
+      const tx =
+        txData.result;
+
+      if (tx) {
+
+        const accountKeys =
+          tx.transaction?.message?.accountKeys || [];
+
+        const signers =
+          accountKeys
+            .filter(a => a.signer === true)
+            .map(a => ({
+              address: a.pubkey,
+              writable: a.writable
+            }));
+
+        firstTransaction = {
+          signature: firstSignature,
+          slot: tx.slot || null,
+          blockTime: tx.blockTime || null,
+          feeLamports: tx.meta?.fee || 0,
+          signers
+        };
+      }
     }
 
-    const tx =
-      txData.result;
+    // 4. Choose creator candidate
+    const verifiedCreator =
+      creatorCandidates.find(
+        c => c.verified === true
+      );
 
-    if (!tx) {
-      return res.status(404).json({
-        success: false,
-        error: "Transaction not found",
-        signature: firstSignature
-      });
-    }
-
-    const message =
-      tx.transaction?.message;
-
-    const accountKeys =
-      message?.accountKeys || [];
-
-    const signers =
-      accountKeys
-        .filter(account => account.signer === true)
-        .map(account => ({
-          address: account.pubkey,
-          writable: account.writable
-        }));
+    const creator =
+      verifiedCreator?.address ||
+      creatorCandidates[0]?.address ||
+      firstTransaction?.signers?.[0]?.address ||
+      null;
 
     return res.status(200).json({
       success: true,
 
       token,
 
-      firstTransaction: {
-        signature: firstSignature,
-        slot: tx.slot || null,
-        blockTime: tx.blockTime || null,
-        feeLamports: tx.meta?.fee || 0,
+      creator: {
+        address: creator,
+        source:
+          verifiedCreator
+            ? "helius_verified_creator"
+            : creatorCandidates.length
+              ? "helius_creator"
+              : "earliest_transaction_signer"
+      },
 
-        signers,
+      creatorCandidates,
 
-        accounts: accountKeys.map(
-          account => ({
-            address: account.pubkey,
-            signer: account.signer,
-            writable: account.writable
-          })
-        )
+      firstTransaction,
+
+      asset: {
+        name:
+          asset.content?.metadata?.name ||
+          null,
+
+        symbol:
+          asset.content?.metadata?.symbol ||
+          null,
+
+        interface:
+          asset.interface ||
+          null,
+
+        tokenStandard:
+          asset.token_info?.token_standard ||
+          null
       }
     });
 
   } catch (error) {
+
     return res.status(500).json({
       success: false,
       error: String(error)
