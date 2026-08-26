@@ -3,13 +3,21 @@
 // =========================
 
 async function login() {
+
   const passwordInput =
-    document.getElementById("passwordInput");
+    document.getElementById(
+      "passwordInput"
+    );
 
   const loginResult =
-    document.getElementById("loginResult");
+    document.getElementById(
+      "loginResult"
+    );
 
-  if (!passwordInput || !loginResult) {
+  if (
+    !passwordInput ||
+    !loginResult
+  ) {
     return;
   }
 
@@ -17,11 +25,13 @@ async function login() {
     passwordInput.value.trim();
 
   if (!password) {
+
     loginResult.innerHTML = `
       <div class="danger">
         Please enter your password.
       </div>
     `;
+
     return;
   }
 
@@ -32,10 +42,10 @@ async function login() {
   `;
 
   try {
+
     const response =
       await fetch(
-        "/api/login?_t=" +
-        Date.now(),
+        "/api/login",
         {
           method: "POST",
           cache: "no-store",
@@ -45,7 +55,7 @@ async function login() {
               "application/json",
 
             "Cache-Control":
-              "no-cache, no-store, max-age=0"
+              "no-cache"
           },
 
           body: JSON.stringify({
@@ -61,6 +71,7 @@ async function login() {
       !response.ok ||
       !data.success
     ) {
+
       throw new Error(
         data.error ||
         "Login failed"
@@ -79,6 +90,7 @@ async function login() {
     showScanner();
 
   } catch (error) {
+
     loginResult.innerHTML = `
       <div class="danger">
         ❌ ${escapeHtml(
@@ -96,18 +108,25 @@ async function login() {
 // =========================
 
 function showScanner() {
+
   const loginBox =
-    document.getElementById("loginBox");
+    document.getElementById(
+      "loginBox"
+    );
 
   const scannerBox =
-    document.getElementById("scannerBox");
+    document.getElementById(
+      "scannerBox"
+    );
 
   if (loginBox) {
-    loginBox.style.display = "none";
+    loginBox.style.display =
+      "none";
   }
 
   if (scannerBox) {
-    scannerBox.style.display = "block";
+    scannerBox.style.display =
+      "block";
   }
 }
 
@@ -117,13 +136,11 @@ function showScanner() {
 // =========================
 
 function checkLogin() {
-  const authenticated =
-    sessionStorage.getItem(
-      "scannerAuthenticated"
-    );
 
   if (
-    authenticated === "true"
+    sessionStorage.getItem(
+      "scannerAuthenticated"
+    ) === "true"
   ) {
     showScanner();
   }
@@ -134,9 +151,14 @@ function checkLogin() {
 // TOKEN EXTRACTION
 // =========================
 
-function extractTokenAddress(input) {
+function extractTokenAddress(
+  input
+) {
+
   input =
-    String(input || "").trim();
+    String(
+      input || ""
+    ).trim();
 
   if (!input) {
     return "";
@@ -159,6 +181,7 @@ function extractTokenAddress(input) {
   }
 
   try {
+
     const url =
       new URL(input);
 
@@ -167,11 +190,14 @@ function extractTokenAddress(input) {
         .split("/")
         .filter(Boolean);
 
-    if (parts.length > 0) {
+    if (
+      parts.length > 0
+    ) {
       return parts[
         parts.length - 1
       ];
     }
+
   } catch {}
 
   return input;
@@ -183,6 +209,7 @@ function extractTokenAddress(input) {
 // =========================
 
 async function pasteToken() {
+
   const tokenInput =
     document.getElementById(
       "tokenInput"
@@ -193,20 +220,21 @@ async function pasteToken() {
   }
 
   try {
+
     const text =
       await navigator.clipboard.readText();
 
-    if (!text) {
+    if (text) {
+
+      tokenInput.value =
+        text.trim();
+
       tokenInput.focus();
-      return;
+
     }
 
-    tokenInput.value =
-      text.trim();
-
-    tokenInput.focus();
-
   } catch {
+
     alert(
       "Unable to access clipboard. Please paste manually."
     );
@@ -221,6 +249,7 @@ async function pasteToken() {
 // =========================
 
 function clearScanner() {
+
   const tokenInput =
     document.getElementById(
       "tokenInput"
@@ -233,14 +262,11 @@ function clearScanner() {
 
   if (tokenInput) {
     tokenInput.value = "";
+    tokenInput.focus();
   }
 
   if (result) {
     result.innerHTML = "";
-  }
-
-  if (tokenInput) {
-    tokenInput.focus();
   }
 }
 
@@ -250,6 +276,7 @@ function clearScanner() {
 // =========================
 
 async function scanToken() {
+
   const tokenInput =
     document.getElementById(
       "tokenInput"
@@ -265,7 +292,10 @@ async function scanToken() {
       ".scan-btn"
     );
 
-  if (!tokenInput || !result) {
+  if (
+    !tokenInput ||
+    !result
+  ) {
     return;
   }
 
@@ -273,6 +303,7 @@ async function scanToken() {
     tokenInput.value.trim();
 
   if (!input) {
+
     result.innerHTML = `
       <div class="card result">
         <div class="danger">
@@ -283,13 +314,17 @@ async function scanToken() {
     `;
 
     tokenInput.focus();
+
     return;
   }
 
   const token =
-    extractTokenAddress(input);
+    extractTokenAddress(
+      input
+    );
 
   if (!token) {
+
     result.innerHTML = `
       <div class="card result">
         <div class="danger">
@@ -302,13 +337,16 @@ async function scanToken() {
   }
 
   if (scanButton) {
+
     scanButton.disabled = true;
+
     scanButton.innerHTML =
       "⏳ Scanning LIVE...";
+
   }
 
   result.innerHTML = `
-    <div class="card result">
+    <div class="card result loading-card">
 
       <div class="small">
         LIVE SCAN
@@ -323,24 +361,29 @@ async function scanToken() {
         trading and holder data...
       </p>
 
+      <div class="scan-loader">
+        <div></div>
+      </div>
+
     </div>
   `;
 
   try {
+
     const cacheBuster =
       Date.now();
 
-    const scanUrl =
-      "/api/scan?token=" +
-      encodeURIComponent(token) +
-      "&_t=" +
-      cacheBuster;
-
     const response =
       await fetch(
-        scanUrl,
+        "/api/scan?token=" +
+          encodeURIComponent(
+            token
+          ) +
+          "&_t=" +
+          cacheBuster,
         {
           method: "GET",
+
           cache: "no-store",
 
           headers: {
@@ -356,8 +399,16 @@ async function scanToken() {
         }
       );
 
-    const data =
-      await response.json();
+    let data;
+
+    try {
+      data =
+        await response.json();
+    } catch {
+      throw new Error(
+        "Invalid response from server"
+      );
+    }
 
     if (
       !response.ok ||
@@ -372,20 +423,26 @@ async function scanToken() {
     displayScanResult(data);
 
   } catch (error) {
+
     result.innerHTML = `
       <div class="card result">
+
         <div class="danger">
           ❌ ${escapeHtml(
             error.message ||
             "Scanner error"
           )}
         </div>
+
       </div>
     `;
 
   } finally {
+
     if (scanButton) {
-      scanButton.disabled = false;
+
+      scanButton.disabled =
+        false;
 
       scanButton.innerHTML =
         "🔍 Scan Token";
@@ -398,7 +455,10 @@ async function scanToken() {
 // DISPLAY RESULT
 // =========================
 
-function displayScanResult(data) {
+function displayScanResult(
+  data
+) {
+
   const result =
     document.getElementById(
       "result"
@@ -423,382 +483,599 @@ function displayScanResult(data) {
   const token =
     data.token || {};
 
+  const developer =
+    data.developer || {};
+
+  const firstBuyers =
+    data.firstBuyers || {};
+
+  const quality =
+    data.dataQuality || {};
+
   const score =
     Number(
-      scanner.score ?? 0
+      scanner.score || 0
     );
 
   const verdict =
     scanner.verdict ||
     "UNKNOWN";
 
-  const riskLevel =
-    scanner.riskLevel ||
-    "UNKNOWN";
+  const scoreClass =
+    getScoreClass(score);
 
-  const tokenName =
-    escapeHtml(
-      token.name ||
-      "Unknown"
-    );
-
-  const tokenSymbol =
-    escapeHtml(
-      token.symbol ||
-      "-"
-    );
-
-  const tokenAddress =
-    escapeHtml(
-      token.address ||
-      "-"
-    );
-
-  let updatedAt =
-    new Date();
-
-  if (data.scannedAt) {
-    updatedAt =
-      new Date(
-        data.scannedAt
-      );
-  }
-
-  const updatedTime =
-    updatedAt.toLocaleTimeString(
-      "en-US",
-      {
-        hour: "2-digit",
-        minute: "2-digit",
-        second: "2-digit"
-      }
-    );
-
-  const updatedDate =
-    updatedAt.toLocaleDateString(
-      "en-US"
-    );
-
-  const redFlags =
-    Array.isArray(
-      scanner.redFlags
-    )
-      ? scanner.redFlags
-      : [];
-
-  const analysis =
-    Array.isArray(
-      scanner.analysis
-    )
-      ? scanner.analysis
-      : [];
+  const updatedAt =
+    data.scannedAt
+      ? new Date(
+          data.scannedAt
+        ).toLocaleTimeString(
+          "en-US",
+          {
+            hour:
+              "2-digit",
+            minute:
+              "2-digit",
+            second:
+              "2-digit"
+          }
+        )
+      : "NOW";
 
   result.innerHTML = `
 
-    <div class="card result">
+    <!-- =========================
+         TOKEN HEADER
+    ========================== -->
 
-      <!-- TOKEN -->
+    <div class="card result">
 
       <div class="small">
         TOKEN
       </div>
 
       <h2>
-        ${tokenName}
-        (${tokenSymbol})
+        ${escapeHtml(
+          token.name ||
+          "Unknown"
+        )}
+        <span class="token-symbol">
+          (${escapeHtml(
+            token.symbol ||
+            "-"
+          )})
+        </span>
       </h2>
+
+      <div class="live-badge">
+        ● LIVE
+      </div>
 
       <p class="small">
-        🟢 LIVE DATA
-        <br>
-        Updated:
-        ${updatedDate}
-        ${updatedTime}
-      </p>
-
-
-      <hr>
-
-
-      <!-- SCORE -->
-
-      <div class="small">
-        SCANNER RESULT
-      </div>
-
-      <h2>
-        ${escapeHtml(verdict)}
-      </h2>
-
-      <p>
-        <strong>Score:</strong>
-        ${score}/100
-      </p>
-
-      <p>
-        <strong>Risk:</strong>
+        🔄 Updated:
         ${escapeHtml(
-          riskLevel
+          updatedAt
         )}
       </p>
-
-
-      <hr>
-
-
-      <!-- MARKET -->
-
-      <div class="small">
-        MARKET
-      </div>
-
-      <p>
-        <strong>Price:</strong>
-        $${formatPrice(
-          market.priceUsd
-        )}
-      </p>
-
-      <p>
-        <strong>Market Cap:</strong>
-        $${formatNumber(
-          market.marketCap
-        )}
-      </p>
-
-      <p>
-        <strong>Liquidity:</strong>
-        $${formatNumber(
-          market.liquidityUsd
-        )}
-      </p>
-
-      <p>
-        <strong>5M Volume:</strong>
-        $${formatNumber(
-          market.volume5m
-        )}
-      </p>
-
-      <p>
-        <strong>1H Volume:</strong>
-        $${formatNumber(
-          market.volume1h
-        )}
-      </p>
-
-      <p>
-        <strong>24H Volume:</strong>
-        $${formatNumber(
-          market.volume24h
-        )}
-      </p>
-
-      <p>
-        <strong>5M Change:</strong>
-        ${formatPercent(
-          market.priceChange5m
-        )}
-      </p>
-
-      <p>
-        <strong>1H Change:</strong>
-        ${formatPercent(
-          market.priceChange1h
-        )}
-      </p>
-
-      <p>
-        <strong>24H Change:</strong>
-        ${formatPercent(
-          market.priceChange24h
-        )}
-      </p>
-
-      <p>
-        <strong>Volume/Liquidity:</strong>
-        ${formatNumber(
-          market.volumeLiquidityRatio
-        )}x
-      </p>
-
-      ${
-        market.pairAgeMinutes !==
-        null &&
-        market.pairAgeMinutes !==
-        undefined
-          ? `
-            <p>
-              <strong>Pair Age:</strong>
-              ${formatAge(
-                market.pairAgeMinutes
-              )}
-            </p>
-          `
-          : ""
-      }
-
-
-      <hr>
-
-
-      <!-- TRADING -->
-
-      <div class="small">
-        TRADING
-      </div>
-
-      <p>
-        <strong>5M Buys:</strong>
-        ${formatInteger(
-          trading.buys5m
-        )}
-      </p>
-
-      <p>
-        <strong>5M Sells:</strong>
-        ${formatInteger(
-          trading.sells5m
-        )}
-      </p>
-
-      <p>
-        <strong>1H Buys:</strong>
-        ${formatInteger(
-          trading.buys1h
-        )}
-      </p>
-
-      <p>
-        <strong>1H Sells:</strong>
-        ${formatInteger(
-          trading.sells1h
-        )}
-      </p>
-
-      <p>
-        <strong>24H Buys:</strong>
-        ${formatInteger(
-          trading.buys24h
-        )}
-      </p>
-
-      <p>
-        <strong>24H Sells:</strong>
-        ${formatInteger(
-          trading.sells24h
-        )}
-      </p>
-
-      <p>
-        <strong>1H Buy Pressure:</strong>
-        ${formatPercent(
-          trading.buyPressure
-        )}
-      </p>
-
-      <p>
-        <strong>5M Buy Pressure:</strong>
-        ${formatPercent(
-          trading.buyPressure5m
-        )}
-      </p>
-
-
-      <hr>
-
-
-      <!-- HOLDERS -->
-
-      <div class="small">
-        HOLDERS
-      </div>
-
-      <p>
-        <strong>Tracked Owners:</strong>
-        ${formatInteger(
-          holders.uniqueOwners
-        )}
-      </p>
-
-      <p>
-        <strong>Top 1:</strong>
-        ${formatPercent(
-          holders.top1Percentage
-        )}
-      </p>
-
-      <p>
-        <strong>Top 5:</strong>
-        ${formatPercent(
-          holders.top5Percentage
-        )}
-      </p>
-
-      <p>
-        <strong>Top 10:</strong>
-        ${formatPercent(
-          holders.top10Percentage
-        )}
-      </p>
-
-
-      <hr>
-
-
-      <!-- RED FLAGS -->
-
-      <div class="small">
-        🚨 RED FLAGS
-      </div>
-
-      ${
-        redFlags.length > 0
-          ? renderRedFlags(
-              redFlags
-            )
-          : `
-            <p>
-              🟢 No major red flags detected.
-            </p>
-          `
-      }
-
-
-      <hr>
-
-
-      <!-- ANALYSIS -->
-
-      <div class="small">
-        ANALYSIS
-      </div>
-
-      ${renderAnalysis(
-        analysis
-      )}
-
-
-      <hr>
-
-
-      <!-- CONTRACT -->
-
-      <div class="small">
-        CONTRACT ADDRESS
-      </div>
 
       <p
-        style="
-          word-break: break-all;
-        "
+        class="address"
+        onclick="copyText('${escapeAttribute(
+          token.address || ""
+        )}')"
       >
-        ${tokenAddress}
+        ${escapeHtml(
+          token.address ||
+          "-"
+        )}
       </p>
 
     </div>
 
+
+    <!-- =========================
+         SCORE
+    ========================== -->
+
+    <div class="
+      card
+      result
+      score-card
+      ${scoreClass}
+    ">
+
+      <div class="small">
+        FINAL SCANNER SCORE
+      </div>
+
+      <div class="score-number">
+        ${score}
+        <span>/100</span>
+      </div>
+
+      <div class="verdict">
+        ${escapeHtml(
+          verdict
+        )}
+      </div>
+
+      <div class="score-bar">
+        <div
+          style="width:${score}%"
+        ></div>
+      </div>
+
+    </div>
+
+
+    <!-- =========================
+         MARKET
+    ========================== -->
+
+    <div class="card result">
+
+      <div class="section-title">
+        📊 MARKET
+      </div>
+
+      <div class="metric-grid">
+
+        ${metric(
+          "Price",
+          "$" +
+            formatPrice(
+              market.priceUsd
+            )
+        )}
+
+        ${metric(
+          "Market Cap",
+          "$" +
+            formatNumber(
+              market.marketCap
+            )
+        )}
+
+        ${metric(
+          "Liquidity",
+          "$" +
+            formatNumber(
+              market.liquidityUsd
+            )
+        )}
+
+        ${metric(
+          "24H Volume",
+          "$" +
+            formatNumber(
+              market.volume24h
+            )
+        )}
+
+        ${metric(
+          "24H Change",
+          formatPercent(
+            market.priceChange24h
+          )
+        )}
+
+        ${metric(
+          "Vol/Liq",
+          formatNumber(
+            market.volumeLiquidityRatio
+          ) +
+            "x"
+        )}
+
+      </div>
+
+      <p class="small">
+        Data:
+        ${escapeHtml(
+          market.dataSource ||
+          "-"
+        )}
+      </p>
+
+    </div>
+
+
+    <!-- =========================
+         TRADING
+    ========================== -->
+
+    <div class="card result">
+
+      <div class="section-title">
+        ⚡ TRADING
+      </div>
+
+      <div class="metric-grid">
+
+        ${metric(
+          "1H Buys",
+          formatInteger(
+            trading.buys1h
+          )
+        )}
+
+        ${metric(
+          "1H Sells",
+          formatInteger(
+            trading.sells1h
+          )
+        )}
+
+        ${metric(
+          "Total Trades",
+          formatInteger(
+            trading.totalTrades
+          )
+        )}
+
+        ${metric(
+          "Buy Pressure",
+          formatPercent(
+            trading.buyPressure
+          )
+        )}
+
+      </div>
+
+      <div class="pressure-bar">
+
+        <div
+          style="
+            width:${Math.max(
+              0,
+              Math.min(
+                100,
+                Number(
+                  trading.buyPressure ||
+                  0
+                )
+              )
+            )}%
+          "
+        ></div>
+
+      </div>
+
+      <p class="small">
+        Buy pressure is based on
+        1-hour transaction count.
+      </p>
+
+    </div>
+
+
+    <!-- =========================
+         HOLDER DISTRIBUTION
+    ========================== -->
+
+    <div class="card result">
+
+      <div class="section-title">
+        🐋 HOLDER DISTRIBUTION
+      </div>
+
+      <div class="metric-grid">
+
+        ${metric(
+          "Holders",
+          formatInteger(
+            holders.uniqueOwners
+          )
+        )}
+
+        ${metric(
+          "Top 1",
+          formatPercent(
+            holders.top1Percentage
+          )
+        )}
+
+        ${metric(
+          "Top 5",
+          formatPercent(
+            holders.top5Percentage
+          )
+        )}
+
+        ${metric(
+          "Top 10",
+          formatPercent(
+            holders.top10Percentage
+          )
+        )}
+
+        ${metric(
+          "Top 20",
+          formatPercent(
+            holders.top20Percentage
+          )
+        )}
+
+        ${metric(
+          "≥5% Wallets",
+          formatInteger(
+            holders.whale5
+          )
+        )}
+
+      </div>
+
+    </div>
+
+
+    <!-- =========================
+         TOP WALLETS
+    ========================== -->
+
+    <div class="card result">
+
+      <div class="section-title">
+        👛 TOP WALLETS
+      </div>
+
+      ${
+        renderWallets(
+          holders.accounts
+        )
+      }
+
+    </div>
+
+
+    <!-- =========================
+         RED FLAGS
+    ========================== -->
+
+    <div class="card result">
+
+      <div class="section-title">
+        🚨 RED FLAGS
+      </div>
+
+      ${
+        renderRedFlags(
+          scanner.redFlags
+        )
+      }
+
+    </div>
+
+
+    <!-- =========================
+         ANALYSIS
+    ========================== -->
+
+    <div class="card result">
+
+      <div class="section-title">
+        🧠 ANALYSIS
+      </div>
+
+      ${
+        renderAnalysis(
+          scanner.analysis
+        )
+      }
+
+    </div>
+
+
+    <!-- =========================
+         DEV
+    ========================== -->
+
+    <div class="card result">
+
+      <div class="section-title">
+        🧑‍💻 DEV / CREATOR
+      </div>
+
+      <div class="info-box">
+        ⚠️ ${escapeHtml(
+          developer.status ||
+          "Not detected"
+        )}
+      </div>
+
+      <p class="small">
+        We intentionally do not label a
+        top holder as the developer without
+        transaction-history evidence.
+      </p>
+
+    </div>
+
+
+    <!-- =========================
+         FIRST BUYERS
+    ========================== -->
+
+    <div class="card result">
+
+      <div class="section-title">
+        🚀 FIRST BUYERS
+      </div>
+
+      <div class="info-box">
+        ⚠️ ${escapeHtml(
+          firstBuyers.status ||
+          "Not detected"
+        )}
+      </div>
+
+    </div>
+
+
+    <!-- =========================
+         DATA QUALITY
+    ========================== -->
+
+    <div class="card result">
+
+      <div class="section-title">
+        🛰️ DATA STATUS
+      </div>
+
+      ${metric(
+        "Holder Accounts Scanned",
+        formatInteger(
+          quality.holderAccountsFetched
+        )
+      )}
+
+      ${metric(
+        "Source",
+        quality.holderDataSource ||
+          "-"
+      )}
+
+      <div class="success">
+        ✓ Fresh scan completed
+      </div>
+
+    </div>
+
+
+    <!-- =========================
+         CONTRACT
+    ========================== -->
+
+    <div class="card result">
+
+      <div class="section-title">
+        📋 CONTRACT ADDRESS
+      </div>
+
+      <p
+        class="address large-address"
+        onclick="copyText('${escapeAttribute(
+          token.address || ""
+        )}')"
+      >
+        ${escapeHtml(
+          token.address ||
+          "-"
+        )}
+      </p>
+
+      <button
+        class="copy-btn"
+        onclick="copyText('${escapeAttribute(
+          token.address || ""
+        )}')"
+      >
+        📋 Copy Contract
+      </button>
+
+    </div>
+
   `;
+}
+
+
+// =========================
+// METRIC
+// =========================
+
+function metric(
+  label,
+  value
+) {
+
+  return `
+    <div class="metric">
+
+      <div class="metric-label">
+        ${escapeHtml(
+          label
+        )}
+      </div>
+
+      <div class="metric-value">
+        ${escapeHtml(
+          value
+        )}
+      </div>
+
+    </div>
+  `;
+}
+
+
+// =========================
+// SCORE CLASS
+// =========================
+
+function getScoreClass(
+  score
+) {
+
+  if (score >= 70) {
+    return "score-good";
+  }
+
+  if (score >= 55) {
+    return "score-watch";
+  }
+
+  if (score >= 35) {
+    return "score-risk";
+  }
+
+  return "score-danger";
+}
+
+
+// =========================
+// WALLET RENDER
+// =========================
+
+function renderWallets(
+  accounts
+) {
+
+  if (
+    !Array.isArray(accounts) ||
+    accounts.length === 0
+  ) {
+
+    return `
+      <div class="info-box">
+        No holder data available.
+      </div>
+    `;
+  }
+
+  return accounts
+    .slice(0, 10)
+    .map(
+      holder => `
+        <div class="wallet-row">
+
+          <div class="wallet-rank">
+            #${holder.rank}
+          </div>
+
+          <div class="wallet-address">
+            ${shortAddress(
+              holder.address
+            )}
+          </div>
+
+          <div class="wallet-percent">
+            ${formatPercent(
+              holder.percentage
+            )}
+          </div>
+
+        </div>
+      `
+    )
+    .join("");
 }
 
 
@@ -809,14 +1086,28 @@ function displayScanResult(data) {
 function renderRedFlags(
   flags
 ) {
+
+  if (
+    !Array.isArray(flags) ||
+    flags.length === 0
+  ) {
+
+    return `
+      <div class="success">
+        ✓ No major red flags detected
+        from the current data.
+      </div>
+    `;
+  }
+
   return flags
     .map(
       flag => `
-        <p class="danger">
+        <div class="flag">
           🚨 ${escapeHtml(
             flag
           )}
-        </p>
+        </div>
       `
     )
     .join("");
@@ -830,27 +1121,27 @@ function renderRedFlags(
 function renderAnalysis(
   analysis
 ) {
+
   if (
-    !Array.isArray(
-      analysis
-    ) ||
+    !Array.isArray(analysis) ||
     analysis.length === 0
   ) {
+
     return `
-      <p>
+      <div class="info-box">
         No analysis available.
-      </p>
+      </div>
     `;
   }
 
   return analysis
     .map(
       item => `
-        <p>
+        <div class="analysis-item">
           ${escapeHtml(
             item
           )}
-        </p>
+        </div>
       `
     )
     .join("");
@@ -858,44 +1149,82 @@ function renderAnalysis(
 
 
 // =========================
-// FORMAT AGE
+// SHORT ADDRESS
 // =========================
 
-function formatAge(
-  minutes
+function shortAddress(
+  address
 ) {
-  const number =
-    Number(minutes);
+
+  const value =
+    String(
+      address || ""
+    );
 
   if (
-    !Number.isFinite(
-      number
-    )
+    value.length <= 14
   ) {
-    return "-";
-  }
-
-  if (number < 60) {
-    return (
-      number.toFixed(1) +
-      " minutes"
-    );
-  }
-
-  const hours =
-    number / 60;
-
-  if (hours < 24) {
-    return (
-      hours.toFixed(1) +
-      " hours"
-    );
+    return value;
   }
 
   return (
-    (hours / 24).toFixed(1) +
-    " days"
+    value.slice(0, 6) +
+    "..." +
+    value.slice(-6)
   );
+}
+
+
+// =========================
+// COPY
+// =========================
+
+async function copyText(
+  text
+) {
+
+  try {
+
+    await navigator.clipboard.writeText(
+      text
+    );
+
+    alert(
+      "Copied!"
+    );
+
+  } catch {
+
+    alert(
+      "Copy failed. Please copy manually."
+    );
+  }
+}
+
+
+// =========================
+// ESCAPE ATTRIBUTE
+// =========================
+
+function escapeAttribute(
+  value
+) {
+
+  return String(
+    value ?? ""
+  )
+    .replace(
+      /\\/g,
+      "\\\\"
+    )
+    .replace(
+      /'/g,
+      "\\'"
+    )
+    .replace(
+      /"/g,
+      "&quot;"
+    );
 }
 
 
@@ -906,13 +1235,12 @@ function formatAge(
 function formatNumber(
   value
 ) {
+
   const number =
     Number(value);
 
   if (
-    !Number.isFinite(
-      number
-    )
+    !Number.isFinite(number)
   ) {
     return "0";
   }
@@ -933,13 +1261,12 @@ function formatNumber(
 function formatInteger(
   value
 ) {
+
   const number =
     Number(value);
 
   if (
-    !Number.isFinite(
-      number
-    )
+    !Number.isFinite(number)
   ) {
     return "0";
   }
@@ -959,13 +1286,12 @@ function formatInteger(
 function formatPercent(
   value
 ) {
+
   const number =
     Number(value);
 
   if (
-    !Number.isFinite(
-      number
-    )
+    !Number.isFinite(number)
   ) {
     return "0%";
   }
@@ -989,13 +1315,12 @@ function formatPercent(
 function formatPrice(
   value
 ) {
+
   const number =
     Number(value);
 
   if (
-    !Number.isFinite(
-      number
-    ) ||
+    !Number.isFinite(number) ||
     number <= 0
   ) {
     return "0";
@@ -1042,6 +1367,7 @@ function formatPrice(
 function escapeHtml(
   value
 ) {
+
   const div =
     document.createElement(
       "div"
@@ -1061,6 +1387,7 @@ function escapeHtml(
 // =========================
 
 function setupKeyboardEvents() {
+
   const tokenInput =
     document.getElementById(
       "tokenInput"
@@ -1072,14 +1399,17 @@ function setupKeyboardEvents() {
     );
 
   if (passwordInput) {
+
     passwordInput.addEventListener(
       "keydown",
       event => {
+
         if (
-          event.key ===
-          "Enter"
+          event.key === "Enter"
         ) {
+
           event.preventDefault();
+
           login();
         }
       }
@@ -1087,14 +1417,17 @@ function setupKeyboardEvents() {
   }
 
   if (tokenInput) {
+
     tokenInput.addEventListener(
       "keydown",
       event => {
+
         if (
-          event.key ===
-          "Enter"
+          event.key === "Enter"
         ) {
+
           event.preventDefault();
+
           scanToken();
         }
       }
@@ -1104,13 +1437,16 @@ function setupKeyboardEvents() {
 
 
 // =========================
-// PAGE LOAD
+// LOAD
 // =========================
 
 document.addEventListener(
   "DOMContentLoaded",
   () => {
+
     checkLogin();
+
     setupKeyboardEvents();
+
   }
 );
