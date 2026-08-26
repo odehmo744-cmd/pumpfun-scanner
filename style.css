@@ -1,7 +1,3 @@
-/* =========================================
-   RESET
-========================================= */
-
 * {
   box-sizing: border-box;
 }
@@ -27,14 +23,8 @@ body {
   overflow-x: hidden;
 }
 
-
-/* =========================================
-   ANIMATED BACKGROUND
-========================================= */
-
 .background {
   position: fixed;
-
   inset: 0;
 
   overflow: hidden;
@@ -49,24 +39,30 @@ body {
     );
 }
 
-
-/* Moving grid */
-
 .background::before {
   content: "";
 
   position: absolute;
-
   inset: -50%;
 
   background-image:
     linear-gradient(
-      rgba(0, 212, 255, 0.04) 1px,
+      rgba(
+        0,
+        212,
+        255,
+        0.04
+      ) 1px,
       transparent 1px
     ),
     linear-gradient(
       90deg,
-      rgba(0, 212, 255, 0.04) 1px,
+      rgba(
+        0,
+        212,
+        255,
+        0.04
+      ) 1px,
       transparent 1px
     );
 
@@ -84,7 +80,6 @@ body {
   opacity: 0.5;
 }
 
-
 @keyframes gridMove {
 
   from {
@@ -96,13 +91,7 @@ body {
     background-position:
       0 50px;
   }
-
 }
-
-
-/* =========================================
-   GLOWING ORBS
-========================================= */
 
 .orb {
   position: absolute;
@@ -123,7 +112,6 @@ body {
     float 12s infinite ease-in-out;
 }
 
-
 .orb1 {
   top: -150px;
   left: -100px;
@@ -134,7 +122,6 @@ body {
   animation-duration:
     14s;
 }
-
 
 .orb2 {
   bottom: -200px;
@@ -150,7 +137,6 @@ body {
     -5s;
 }
 
-
 .orb3 {
   top: 40%;
   left: 40%;
@@ -161,8 +147,7 @@ body {
   background:
     #00ff99;
 
-  opacity:
-    0.12;
+  opacity: 0.12;
 
   animation-duration:
     10s;
@@ -170,7 +155,6 @@ body {
   animation-delay:
     -3s;
 }
-
 
 @keyframes float {
 
@@ -212,13 +196,7 @@ body {
       translate(0, 0)
       scale(1);
   }
-
 }
-
-
-/* =========================================
-   CONTAINER
-========================================= */
 
 .container {
   width: 100%;
@@ -231,11 +209,6 @@ body {
     40px 20px 80px;
 }
 
-
-/* =========================================
-   HEADER
-========================================= */
-
 .header {
   text-align: center;
 
@@ -246,7 +219,6 @@ body {
     headerAppear
     0.7s ease;
 }
-
 
 @keyframes headerAppear {
 
@@ -263,9 +235,7 @@ body {
     transform:
       translateY(0);
   }
-
 }
-
 
 h1 {
   margin:
@@ -290,7 +260,6 @@ h1 {
     );
 }
 
-
 h2 {
   margin-top:
     0;
@@ -299,10 +268,8 @@ h2 {
     1.4;
 }
 
-
 .subtitle {
-  margin:
-    0;
+  margin: 0;
 
   color:
     #aeb8d0;
@@ -310,11 +277,6 @@ h2 {
   line-height:
     1.6;
 }
-
-
-/* =========================================
-   GLASS CARD
-========================================= */
 
 .card {
   padding:
@@ -371,7 +333,6 @@ h2 {
     0.3s;
 }
 
-
 .card:hover {
   border-color:
     rgba(
@@ -385,13 +346,11 @@ h2 {
     translateY(-2px);
 }
 
-
 .result {
   animation:
     appear
     0.4s ease;
 }
-
 
 @keyframes appear {
 
@@ -408,13 +367,7 @@ h2 {
     transform:
       translateY(0);
   }
-
 }
-
-
-/* =========================================
-   INPUT
-========================================= */
 
 input {
   width: 100%;
@@ -434,8 +387,7 @@ input {
       0.15
     );
 
-  outline:
-    none;
+  outline: none;
 
   color:
     white;
@@ -455,18 +407,6 @@ input {
     0.25s;
 }
 
-
-input:hover {
-  border-color:
-    rgba(
-      0,
-      212,
-      255,
-      0.3
-    );
-}
-
-
 input:focus {
   border-color:
     #00d4ff;
@@ -481,16 +421,10 @@ input:focus {
     );
 }
 
-
 input::placeholder {
   color:
     #77809a;
 }
-
-
-/* =========================================
-   BUTTON GROUP
-========================================= */
 
 .button-group {
   display:
@@ -506,14 +440,8 @@ input::placeholder {
     wrap;
 }
 
-
-/* =========================================
-   BUTTONS
-========================================= */
-
 button {
-  border:
-    none;
+  border: none;
 
   border-radius:
     12px;
@@ -521,8 +449,7 @@ button {
   padding:
     15px 20px;
 
-  color:
-    white;
+  color: white;
 
   font-size:
     15px;
@@ -530,8 +457,7 @@ button {
   font-weight:
     bold;
 
-  cursor:
-    pointer;
+  cursor: pointer;
 
   transition:
     0.25s;
@@ -540,12 +466,10 @@ button {
     transparent;
 }
 
-
 button:active {
   transform:
     scale(0.97);
 }
-
 
 button:disabled {
   opacity:
@@ -558,14 +482,8 @@ button:disabled {
     none;
 }
 
-
-/* =========================================
-   SCAN BUTTON
-========================================= */
-
 .scan-btn {
-  flex:
-    1;
+  flex: 1;
 
   min-width:
     160px;
@@ -587,7 +505,6 @@ button:disabled {
     );
 }
 
-
 .scan-btn:hover:not(:disabled) {
   transform:
     translateY(-2px);
@@ -602,11 +519,6 @@ button:disabled {
     );
 }
 
-
-/* =========================================
-   PASTE BUTTON
-========================================= */
-
 .paste-btn {
   background:
     linear-gradient(
@@ -614,36 +526,7 @@ button:disabled {
       #7c3aed,
       #5b21b6
     );
-
-  box-shadow:
-    0 8px 20px
-    rgba(
-      124,
-      58,
-      237,
-      0.25
-    );
 }
-
-
-.paste-btn:hover {
-  transform:
-    translateY(-2px);
-
-  box-shadow:
-    0 12px 28px
-    rgba(
-      124,
-      58,
-      237,
-      0.4
-    );
-}
-
-
-/* =========================================
-   CLEAR BUTTON
-========================================= */
 
 .clear-btn {
   background:
@@ -667,28 +550,8 @@ button:disabled {
     #ff9a9a;
 }
 
-
-.clear-btn:hover {
-  background:
-    rgba(
-      255,
-      70,
-      70,
-      0.25
-    );
-
-  transform:
-    translateY(-2px);
-}
-
-
-/* =========================================
-   LOGIN BUTTON
-========================================= */
-
 .login-btn {
-  width:
-    100%;
+  width: 100%;
 
   margin-top:
     15px;
@@ -699,36 +562,7 @@ button:disabled {
       #7c3aed,
       #2563eb
     );
-
-  box-shadow:
-    0 8px 25px
-    rgba(
-      80,
-      70,
-      255,
-      0.25
-    );
 }
-
-
-.login-btn:hover {
-  transform:
-    translateY(-2px);
-
-  box-shadow:
-    0 12px 30px
-    rgba(
-      80,
-      70,
-      255,
-      0.45
-    );
-}
-
-
-/* =========================================
-   RESULTS
-========================================= */
 
 .result p {
   line-height:
@@ -738,19 +572,15 @@ button:disabled {
     10px 0;
 }
 
-
 .result strong {
   color:
     #dbeafe;
 }
 
-
 hr {
-  border:
-    none;
+  border: none;
 
-  height:
-    1px;
+  height: 1px;
 
   background:
     linear-gradient(
@@ -769,11 +599,6 @@ hr {
     22px 0;
 }
 
-
-/* =========================================
-   SMALL TEXT
-========================================= */
-
 .small {
   color:
     #7f8aa5;
@@ -788,10 +613,502 @@ hr {
     uppercase;
 }
 
+.section-title {
+  font-size:
+    13px;
 
-/* =========================================
-   ERROR
-========================================= */
+  font-weight:
+    800;
+
+  letter-spacing:
+    1.2px;
+
+  color:
+    #8fdfff;
+
+  margin-bottom:
+    18px;
+}
+
+.token-symbol {
+  color:
+    #8fdfff;
+}
+
+.live-badge {
+  display:
+    inline-block;
+
+  padding:
+    6px 10px;
+
+  margin:
+    5px 0 8px;
+
+  border-radius:
+    999px;
+
+  font-size:
+    11px;
+
+  font-weight:
+    800;
+
+  letter-spacing:
+    1px;
+
+  color:
+    #65ffc2;
+
+  background:
+    rgba(
+      0,
+      255,
+      153,
+      0.08
+    );
+
+  border:
+    1px solid
+    rgba(
+      0,
+      255,
+      153,
+      0.25
+    );
+}
+
+.address {
+  word-break:
+    break-all;
+
+  color:
+    #8fdfff;
+
+  cursor:
+    pointer;
+
+  font-family:
+    monospace;
+
+  font-size:
+    12px;
+}
+
+.large-address {
+  padding:
+    12px;
+
+  border-radius:
+    10px;
+
+  background:
+    rgba(
+      0,
+      0,
+      0,
+      0.25
+    );
+}
+
+.metric-grid {
+  display:
+    grid;
+
+  grid-template-columns:
+    repeat(
+      2,
+      minmax(
+        0,
+        1fr
+      )
+    );
+
+  gap:
+    12px;
+}
+
+.metric {
+  padding:
+    14px;
+
+  border-radius:
+    13px;
+
+  background:
+    rgba(
+      255,
+      255,
+      255,
+      0.035
+    );
+
+  border:
+    1px solid
+    rgba(
+      255,
+      255,
+      255,
+      0.07
+    );
+}
+
+.metric-label {
+  color:
+    #7f8aa5;
+
+  font-size:
+    11px;
+
+  text-transform:
+    uppercase;
+
+  letter-spacing:
+    0.7px;
+
+  margin-bottom:
+    7px;
+}
+
+.metric-value {
+  font-size:
+    18px;
+
+  font-weight:
+    800;
+
+  color:
+    #e8f7ff;
+
+  word-break:
+    break-word;
+}
+
+.score-card {
+  text-align:
+    center;
+}
+
+.score-number {
+  font-size:
+    64px;
+
+  font-weight:
+    900;
+
+  line-height:
+    1;
+
+  margin:
+    15px 0 10px;
+}
+
+.score-number span {
+  font-size:
+    20px;
+
+  color:
+    #7f8aa5;
+}
+
+.verdict {
+  font-size:
+    18px;
+
+  font-weight:
+    900;
+
+  margin-bottom:
+    18px;
+}
+
+.score-bar {
+  width:
+    100%;
+
+  height:
+    10px;
+
+  border-radius:
+    999px;
+
+  overflow:
+    hidden;
+
+  background:
+    rgba(
+      255,
+      255,
+      255,
+      0.08
+    );
+}
+
+.score-bar div {
+  height:
+    100%;
+
+  border-radius:
+    inherit;
+
+  background:
+    linear-gradient(
+      90deg,
+      #ff4d4d,
+      #ffd43b,
+      #00ff99
+    );
+}
+
+.score-good {
+  border-color:
+    rgba(
+      0,
+      255,
+      153,
+      0.35
+    );
+}
+
+.score-watch {
+  border-color:
+    rgba(
+      255,
+      214,
+      59,
+      0.3
+    );
+}
+
+.score-risk {
+  border-color:
+    rgba(
+      255,
+      150,
+      50,
+      0.3
+    );
+}
+
+.score-danger {
+  border-color:
+    rgba(
+      255,
+      70,
+      70,
+      0.35
+    );
+}
+
+.pressure-bar {
+  width:
+    100%;
+
+  height:
+    9px;
+
+  margin:
+    15px 0;
+
+  border-radius:
+    999px;
+
+  overflow:
+    hidden;
+
+  background:
+    rgba(
+      255,
+      70,
+      70,
+      0.15
+    );
+}
+
+.pressure-bar div {
+  height:
+    100%;
+
+  background:
+    linear-gradient(
+      90deg,
+      #00ff99,
+      #00d4ff
+    );
+
+  border-radius:
+    inherit;
+
+  transition:
+    width
+    0.5s ease;
+}
+
+.wallet-row {
+  display:
+    grid;
+
+  grid-template-columns:
+    45px 1fr auto;
+
+  align-items:
+    center;
+
+  gap:
+    10px;
+
+  padding:
+    12px 0;
+
+  border-bottom:
+    1px solid
+    rgba(
+      255,
+      255,
+      255,
+      0.06
+    );
+}
+
+.wallet-rank {
+  color:
+    #7f8aa5;
+
+  font-weight:
+    800;
+}
+
+.wallet-address {
+  font-family:
+    monospace;
+
+  font-size:
+    12px;
+
+  overflow:
+    hidden;
+
+  text-overflow:
+    ellipsis;
+
+  white-space:
+    nowrap;
+}
+
+.wallet-percent {
+  color:
+    #8fdfff;
+
+  font-weight:
+    800;
+}
+
+.flag {
+  padding:
+    13px;
+
+  margin-bottom:
+    9px;
+
+  border-radius:
+    11px;
+
+  color:
+    #ffaaaa;
+
+  background:
+    rgba(
+      255,
+      50,
+      50,
+      0.08
+    );
+
+  border:
+    1px solid
+    rgba(
+      255,
+      70,
+      70,
+      0.2
+    );
+}
+
+.analysis-item {
+  padding:
+    11px 0;
+
+  border-bottom:
+    1px solid
+    rgba(
+      255,
+      255,
+      255,
+      0.06
+    );
+
+  line-height:
+    1.5;
+}
+
+.info-box {
+  padding:
+    14px;
+
+  border-radius:
+    11px;
+
+  background:
+    rgba(
+      0,
+      0,
+      0,
+      0.2
+    );
+
+  border:
+    1px solid
+    rgba(
+      255,
+      255,
+      255,
+      0.08
+    );
+
+  line-height:
+    1.5;
+}
+
+.success {
+  margin-top:
+    12px;
+
+  padding:
+    12px;
+
+  border-radius:
+    10px;
+
+  color:
+    #6fffc0;
+
+  background:
+    rgba(
+      0,
+      255,
+      153,
+      0.08
+    );
+
+  border:
+    1px solid
+    rgba(
+      0,
+      255,
+      153,
+      0.2
+    );
+}
 
 .danger {
   margin-top:
@@ -824,49 +1141,79 @@ hr {
     );
 }
 
+.copy-btn {
+  width:
+    100%;
 
-/* =========================================
-   SUCCESS / STATUS
-========================================= */
+  background:
+    linear-gradient(
+      135deg,
+      #0ea5e9,
+      #2563eb
+    );
+}
 
-.success {
+.scan-loader {
+  height:
+    5px;
+
   margin-top:
-    15px;
+    20px;
 
-  padding:
-    12px;
+  overflow:
+    hidden;
 
   border-radius:
-    10px;
-
-  color:
-    #6fffc0;
+    999px;
 
   background:
     rgba(
-      0,
       255,
-      153,
+      255,
+      255,
       0.08
     );
 }
 
+.scan-loader div {
+  width:
+    35%;
 
-/* =========================================
-   SCROLLBAR
-========================================= */
+  height:
+    100%;
+
+  border-radius:
+    inherit;
+
+  background:
+    #00d4ff;
+
+  animation:
+    loading 1s infinite ease-in-out;
+}
+
+@keyframes loading {
+
+  0% {
+    transform:
+      translateX(-120%);
+  }
+
+  100% {
+    transform:
+      translateX(350%);
+  }
+}
 
 ::-webkit-scrollbar {
   width:
     8px;
 }
 
-
 ::-webkit-scrollbar-track {
   background:
     #070b18;
 }
-
 
 ::-webkit-scrollbar-thumb {
   background:
@@ -881,11 +1228,6 @@ hr {
     10px;
 }
 
-
-/* =========================================
-   MOBILE
-========================================= */
-
 @media (max-width: 600px) {
 
   .container {
@@ -893,18 +1235,15 @@ hr {
       25px 15px 60px;
   }
 
-
   h1 {
     font-size:
       28px;
   }
 
-
   h2 {
     font-size:
       21px;
   }
-
 
   .card {
     padding:
@@ -914,12 +1253,10 @@ hr {
       17px;
   }
 
-
   .card:hover {
     transform:
       none;
   }
-
 
   input {
     padding:
@@ -929,12 +1266,10 @@ hr {
       16px;
   }
 
-
   .button-group {
     flex-direction:
       column;
   }
-
 
   .scan-btn,
   .paste-btn,
@@ -943,18 +1278,20 @@ hr {
       100%;
   }
 
-
-  .scan-btn {
-    min-width:
-      auto;
-  }
-
-
   button {
     min-height:
       50px;
   }
 
+  .metric-grid {
+    grid-template-columns:
+      1fr 1fr;
+  }
+
+  .score-number {
+    font-size:
+      52px;
+  }
 
   .orb {
     filter:
@@ -964,16 +1301,7 @@ hr {
       0.25;
   }
 
-
-  .orb1 {
-    width:
-      350px;
-
-    height:
-      350px;
-  }
-
-
+  .orb1,
   .orb2 {
     width:
       350px;
@@ -982,18 +1310,11 @@ hr {
       350px;
   }
 
-
   .background::before {
     background-size:
       40px 40px;
   }
-
 }
-
-
-/* =========================================
-   SMALL PHONES
-========================================= */
 
 @media (max-width: 380px) {
 
@@ -1005,16 +1326,18 @@ hr {
       10px;
   }
 
-
   h1 {
     font-size:
       25px;
   }
-
 
   .card {
     padding:
       15px;
   }
 
+  .metric-grid {
+    grid-template-columns:
+      1fr;
+  }
 }
