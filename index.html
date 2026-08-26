@@ -24,13 +24,9 @@
 
 </head>
 
-
 <body>
 
-
-  <!-- =========================================
-       ANIMATED BACKGROUND
-  ========================================== -->
+  <!-- ANIMATED BACKGROUND -->
 
   <div class="background">
 
@@ -43,16 +39,12 @@
   </div>
 
 
-  <!-- =========================================
-       MAIN
-  ========================================== -->
+  <!-- MAIN -->
 
   <div class="container">
 
 
-    <!-- =======================================
-         HEADER
-    ======================================== -->
+    <!-- HEADER -->
 
     <div class="header">
 
@@ -67,9 +59,7 @@
     </div>
 
 
-    <!-- =======================================
-         LOGIN
-    ======================================== -->
+    <!-- LOGIN -->
 
     <div
       id="loginBox"
@@ -84,14 +74,12 @@
         Enter your password to continue.
       </p>
 
-
       <input
         id="passwordInput"
         type="password"
         placeholder="Enter password"
         autocomplete="off"
       >
-
 
       <button
         class="login-btn"
@@ -100,7 +88,6 @@
         🔓 Login
       </button>
 
-
       <div
         id="loginResult"
       ></div>
@@ -108,23 +95,18 @@
     </div>
 
 
-    <!-- =======================================
-         SCANNER
-    ======================================== -->
+    <!-- SCANNER -->
 
     <div
       id="scannerBox"
       style="display:none;"
     >
 
-
       <div class="card">
-
 
         <div class="small">
           TOKEN ADDRESS
         </div>
-
 
         <input
           id="tokenInput"
@@ -136,14 +118,12 @@
         >
 
 
-        <!-- ===================================
-             BUTTONS
-        ==================================== -->
+        <!-- BUTTONS -->
 
         <div class="button-group">
 
-
           <button
+            type="button"
             class="scan-btn"
             onclick="scanToken()"
           >
@@ -152,6 +132,7 @@
 
 
           <button
+            type="button"
             class="paste-btn"
             onclick="pasteToken()"
           >
@@ -160,42 +141,30 @@
 
 
           <button
+            type="button"
             class="clear-btn"
             onclick="clearScanner()"
           >
             ✖ Clear
           </button>
 
-
         </div>
-
 
       </div>
 
 
-      <!-- =====================================
-           RESULT
-      ====================================== -->
+      <!-- RESULT -->
 
-      <div
-        id="result"
-      ></div>
-
+      <div id="result"></div>
 
     </div>
-
 
   </div>
 
 
-  <!-- =========================================
-       APP JS
-  ========================================== -->
+  <!-- APP JS -->
 
-  <script
-    src="app.js"
-  ></script>
-
+  <script src="app.js"></script>
 
 </body>
 
