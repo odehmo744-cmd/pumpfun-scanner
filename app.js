@@ -1,12 +1,22 @@
+// =========================
+// LOGIN
+// =========================
+
 async function login() {
+  const passwordInput =
+    document.getElementById(
+      "passwordInput"
+    );
+
   const password =
-    document
-      .getElementById("passwordInput")
+    passwordInput
       .value
       .trim();
 
   const loginResult =
-    document.getElementById("loginResult");
+    document.getElementById(
+      "loginResult"
+    );
 
   if (!password) {
     loginResult.innerHTML = `
@@ -24,18 +34,23 @@ async function login() {
   `;
 
   try {
-    const response = await fetch(
-      "/api/login",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          password
-        })
-      }
-    );
+    const response =
+      await fetch(
+        "/api/login",
+        {
+          method: "POST",
+
+          headers: {
+            "Content-Type":
+              "application/json"
+          },
+
+          body:
+            JSON.stringify({
+              password
+            })
+        }
+      );
 
     const data =
       await response.json();
@@ -50,26 +65,28 @@ async function login() {
       );
     }
 
-    /*
-      Simple login.
-      No SCANNER_AUTH_SECRET.
-      No cookies.
-      No session expiration.
-    */
-
+    // Simple browser session
     sessionStorage.setItem(
       "scannerAuthenticated",
       "true"
     );
 
+    passwordInput.value = "";
+
+    loginResult.innerHTML = "";
+
     showScanner();
 
   } catch (error) {
+
     loginResult.innerHTML = `
       <div class="danger">
-        ❌ ${error.message}
+        ❌ ${escapeHtml(
+          error.message
+        )}
       </div>
     `;
+
   }
 }
 
@@ -79,13 +96,27 @@ async function login() {
 // =========================
 
 function showScanner() {
-  document.getElementById(
-    "loginBox"
-  ).style.display = "none";
 
-  document.getElementById(
-    "scannerBox"
-  ).style.display = "block";
+  const loginBox =
+    document.getElementById(
+      "loginBox"
+    );
+
+  const scannerBox =
+    document.getElementById(
+      "scannerBox"
+    );
+
+  if (loginBox) {
+    loginBox.style.display =
+      "none";
+  }
+
+  if (scannerBox) {
+    scannerBox.style.display =
+      "block";
+  }
+
 }
 
 
@@ -94,6 +125,7 @@ function showScanner() {
 // =========================
 
 function checkLogin() {
+
   const authenticated =
     sessionStorage.getItem(
       "scannerAuthenticated"
@@ -104,6 +136,7 @@ function checkLogin() {
   ) {
     showScanner();
   }
+
 }
 
 
@@ -112,7 +145,9 @@ function checkLogin() {
 // =========================
 
 function extractTokenAddress(input) {
-  input = input.trim();
+
+  input =
+    input.trim();
 
   if (
     !input.includes("http")
@@ -120,16 +155,76 @@ function extractTokenAddress(input) {
     return input;
   }
 
-  const match =
+  // Pump.fun link
+  const pumpMatch =
     input.match(
-      /pump\.fun\/(?:coin\/)?([^/?]+)/i
+      /pump\.fun\/(?:coin\/)?([^/?#]+)/i
     );
 
-  if (match) {
-    return match[1];
+  if (pumpMatch) {
+    return pumpMatch[1];
+  }
+
+  // Generic URL fallback:
+  // Try to extract the last path section.
+  try {
+
+    const url =
+      new URL(input);
+
+    const parts =
+      url.pathname
+        .split("/")
+        .filter(Boolean);
+
+    if (
+      parts.length > 0
+    ) {
+      return parts[
+        parts.length - 1
+      ];
+    }
+
+  } catch {
+    // Not a valid URL
   }
 
   return input;
+
+}
+
+
+// =========================
+// CLEAR SCANNER
+// =========================
+
+function clearScanner() {
+
+  const tokenInput =
+    document.getElementById(
+      "tokenInput"
+    );
+
+  const result =
+    document.getElementById(
+      "result"
+    );
+
+  // Clear token input
+  if (tokenInput) {
+    tokenInput.value = "";
+  }
+
+  // Clear results
+  if (result) {
+    result.innerHTML = "";
+  }
+
+  // Put cursor back in input
+  if (tokenInput) {
+    tokenInput.focus();
+  }
+
 }
 
 
@@ -138,80 +233,156 @@ function extractTokenAddress(input) {
 // =========================
 
 async function scanToken() {
-  const input =
-    document
-      .getElementById(
-        "tokenInput"
-      )
-      .value
-      .trim();
+
+  const tokenInput =
+    document.getElementById(
+      "tokenInput"
+    );
 
   const result =
     document.getElementById(
       "result"
     );
 
+  const scanButton =
+    document.querySelector(
+      ".scan-btn"
+    );
+
+  if (
+    !tokenInput ||
+    !result
+  ) {
+    return;
+  }
+
+  const input =
+    tokenInput
+      .value
+      .trim();
+
   if (!input) {
+
     result.innerHTML = `
-      <div class="card">
+      <div class="card result">
         <div class="danger">
-          Please enter a Pump.fun link or Contract Address.
+          Please enter a Pump.fun link
+          or Contract Address.
         </div>
       </div>
     `;
+
+    tokenInput.focus();
+
     return;
   }
 
   const token =
-    extractTokenAddress(input);
+    extractTokenAddress(
+      input
+    );
+
+  // Prevent multiple scans
+  if (scanButton) {
+
+    scanButton.disabled =
+      true;
+
+    scanButton.innerHTML =
+      "⏳ Scanning...";
+
+  }
 
   result.innerHTML = `
-    <div class="card">
+    <div class="card result">
+
       <div class="small">
         SCANNING...
       </div>
 
       <h2>
-        🔎 Analyzing token
+        🔎 Analyzing Token
       </h2>
 
       <p>
-        Please wait...
+        Fetching market data,
+        trading activity and
+        holder information...
       </p>
+
     </div>
   `;
 
   try {
+
     const response =
       await fetch(
         "/api/scan?token=" +
         encodeURIComponent(token)
       );
 
-    const data =
-      await response.json();
+    let data;
+
+    try {
+
+      data =
+        await response.json();
+
+    } catch {
+
+      throw new Error(
+        "Invalid response from server"
+      );
+
+    }
 
     if (
       !response.ok ||
       !data.success
     ) {
+
       throw new Error(
         data.error ||
         "Scanner error"
       );
+
     }
 
-    displayScanResult(data);
+    displayScanResult(
+      data
+    );
 
   } catch (error) {
+
     result.innerHTML = `
-      <div class="card">
+      <div class="card result">
+
         <div class="danger">
-          ❌ ${error.message}
+
+          ❌ ${escapeHtml(
+            error.message ||
+            "Scanner error"
+          )}
+
         </div>
+
       </div>
     `;
+
+  } finally {
+
+    if (scanButton) {
+
+      scanButton.disabled =
+        false;
+
+      scanButton.innerHTML =
+        "🔍 Scan Token";
+
+    }
+
   }
+
 }
 
 
@@ -225,6 +396,10 @@ function displayScanResult(data) {
     document.getElementById(
       "result"
     );
+
+  if (!result) {
+    return;
+  }
 
   const market =
     data.market || {};
@@ -248,27 +423,51 @@ function displayScanResult(data) {
   const score =
     scanner.score ?? 0;
 
+  const tokenName =
+    escapeHtml(
+      token.name ||
+      "Unknown"
+    );
+
+  const tokenSymbol =
+    escapeHtml(
+      token.symbol ||
+      "-"
+    );
+
+  const tokenAddress =
+    escapeHtml(
+      token.address ||
+      "-"
+    );
+
   result.innerHTML = `
 
     <div class="card result">
+
+      <!-- TOKEN -->
 
       <div class="small">
         TOKEN
       </div>
 
       <h2>
-        ${token.name || "Unknown"}
-        (${token.symbol || "-"})
+        ${tokenName}
+        (${tokenSymbol})
       </h2>
 
+
       <hr>
+
+
+      <!-- SCANNER RESULT -->
 
       <div class="small">
         SCANNER RESULT
       </div>
 
       <h2>
-        ${verdict}
+        ${escapeHtml(verdict)}
       </h2>
 
       <p>
@@ -276,7 +475,11 @@ function displayScanResult(data) {
         ${score}/100
       </p>
 
+
       <hr>
+
+
+      <!-- MARKET -->
 
       <div class="small">
         MARKET
@@ -312,14 +515,29 @@ function displayScanResult(data) {
 
       <p>
         <strong>24H Change:</strong>
-        ${market.priceChange24h || 0}%
+        ${formatPercent(
+          market.priceChange24h
+        )}
       </p>
 
-      <p class="small">
-        Data: ${market.dataSource || "-"}
-      </p>
+      ${
+        market.dataSource
+          ? `
+            <p class="small">
+              Data:
+              ${escapeHtml(
+                market.dataSource
+              )}
+            </p>
+          `
+          : ""
+      }
+
 
       <hr>
+
+
+      <!-- TRADING -->
 
       <div class="small">
         TRADING
@@ -327,25 +545,37 @@ function displayScanResult(data) {
 
       <p>
         <strong>1H Buys:</strong>
-        ${trading.buys1h || 0}
+        ${formatInteger(
+          trading.buys1h
+        )}
       </p>
 
       <p>
         <strong>1H Sells:</strong>
-        ${trading.sells1h || 0}
+        ${formatInteger(
+          trading.sells1h
+        )}
       </p>
 
       <p>
         <strong>Total Trades:</strong>
-        ${trading.totalTrades || 0}
+        ${formatInteger(
+          trading.totalTrades
+        )}
       </p>
 
       <p>
         <strong>Buy Pressure:</strong>
-        ${trading.buyPressure || 0}%
+        ${formatPercent(
+          trading.buyPressure
+        )}
       </p>
 
+
       <hr>
+
+
+      <!-- HOLDERS -->
 
       <div class="small">
         HOLDERS
@@ -353,44 +583,51 @@ function displayScanResult(data) {
 
       <p>
         <strong>Unique Holders:</strong>
-        ${holders.uniqueOwners || 0}
+        ${formatInteger(
+          holders.uniqueOwners
+        )}
       </p>
 
       <p>
         <strong>Top 1:</strong>
-        ${holders.top1Percentage || 0}%
+        ${formatPercent(
+          holders.top1Percentage
+        )}
       </p>
 
       <p>
         <strong>Top 5:</strong>
-        ${holders.top5Percentage || 0}%
+        ${formatPercent(
+          holders.top5Percentage
+        )}
       </p>
 
       <p>
         <strong>Top 10:</strong>
-        ${holders.top10Percentage || 0}%
+        ${formatPercent(
+          holders.top10Percentage
+        )}
       </p>
 
+
       <hr>
+
+
+      <!-- ANALYSIS -->
 
       <div class="small">
         ANALYSIS
       </div>
 
-      ${
-        Array.isArray(
-          scanner.analysis
-        )
-          ? scanner.analysis
-              .map(
-                item =>
-                  `<p>${item}</p>`
-              )
-              .join("")
-          : "<p>No analysis available.</p>"
-      }
+      ${renderAnalysis(
+        scanner.analysis
+      )}
+
 
       <hr>
+
+
+      <!-- CONTRACT -->
 
       <div class="small">
         CONTRACT ADDRESS
@@ -398,14 +635,49 @@ function displayScanResult(data) {
 
       <p
         style="
-          word-break:break-all;
+          word-break:
+          break-all;
         "
       >
-        ${token.address || "-"}
+        ${tokenAddress}
       </p>
 
     </div>
+
   `;
+
+}
+
+
+// =========================
+// RENDER ANALYSIS
+// =========================
+
+function renderAnalysis(analysis) {
+
+  if (
+    !Array.isArray(analysis) ||
+    analysis.length === 0
+  ) {
+
+    return `
+      <p>
+        No analysis available.
+      </p>
+    `;
+
+  }
+
+  return analysis
+    .map(
+      item => `
+        <p>
+          ${escapeHtml(item)}
+        </p>
+      `
+    )
+    .join("");
+
 }
 
 
@@ -414,8 +686,15 @@ function displayScanResult(data) {
 // =========================
 
 function formatNumber(value) {
+
   const number =
-    Number(value || 0);
+    Number(value);
+
+  if (
+    !Number.isFinite(number)
+  ) {
+    return "0";
+  }
 
   return number.toLocaleString(
     "en-US",
@@ -423,6 +702,58 @@ function formatNumber(value) {
       maximumFractionDigits: 2
     }
   );
+
+}
+
+
+// =========================
+// FORMAT INTEGER
+// =========================
+
+function formatInteger(value) {
+
+  const number =
+    Number(value);
+
+  if (
+    !Number.isFinite(number)
+  ) {
+    return "0";
+  }
+
+  return Math.round(
+    number
+  ).toLocaleString(
+    "en-US"
+  );
+
+}
+
+
+// =========================
+// FORMAT PERCENT
+// =========================
+
+function formatPercent(value) {
+
+  const number =
+    Number(value);
+
+  if (
+    !Number.isFinite(number)
+  ) {
+    return "0%";
+  }
+
+  return (
+    number.toFixed(2)
+    .replace(
+      /\.00$/,
+      ""
+    )
+    + "%"
+  );
+
 }
 
 
@@ -431,26 +762,133 @@ function formatNumber(value) {
 // =========================
 
 function formatPrice(value) {
-  const number =
-    Number(value || 0);
 
-  if (!number) {
+  const number =
+    Number(value);
+
+  if (
+    !Number.isFinite(number) ||
+    number <= 0
+  ) {
     return "0";
   }
 
-  if (number < 0.000001) {
+  if (
+    number < 0.00000001
+  ) {
+    return number.toFixed(14);
+  }
+
+  if (
+    number < 0.000001
+  ) {
     return number.toFixed(12);
   }
 
-  if (number < 0.001) {
+  if (
+    number < 0.001
+  ) {
     return number.toFixed(9);
   }
 
-  if (number < 1) {
+  if (
+    number < 1
+  ) {
     return number.toFixed(6);
   }
 
-  return number.toFixed(4);
+  return number.toLocaleString(
+    "en-US",
+    {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 6
+    }
+  );
+
+}
+
+
+// =========================
+// ESCAPE HTML
+// =========================
+
+function escapeHtml(value) {
+
+  const div =
+    document.createElement(
+      "div"
+    );
+
+  div.textContent =
+    String(
+      value ?? ""
+    );
+
+  return div.innerHTML;
+
+}
+
+
+// =========================
+// ENTER KEY SUPPORT
+// =========================
+
+function setupKeyboardEvents() {
+
+  const tokenInput =
+    document.getElementById(
+      "tokenInput"
+    );
+
+  const passwordInput =
+    document.getElementById(
+      "passwordInput"
+    );
+
+  // Enter = Login
+  if (passwordInput) {
+
+    passwordInput.addEventListener(
+      "keydown",
+      event => {
+
+        if (
+          event.key === "Enter"
+        ) {
+
+          event.preventDefault();
+
+          login();
+
+        }
+
+      }
+    );
+
+  }
+
+  // Enter = Scan
+  if (tokenInput) {
+
+    tokenInput.addEventListener(
+      "keydown",
+      event => {
+
+        if (
+          event.key === "Enter"
+        ) {
+
+          event.preventDefault();
+
+          scanToken();
+
+        }
+
+      }
+    );
+
+  }
+
 }
 
 
@@ -460,5 +898,11 @@ function formatPrice(value) {
 
 document.addEventListener(
   "DOMContentLoaded",
-  checkLogin
+  () => {
+
+    checkLogin();
+
+    setupKeyboardEvents();
+
+  }
 );
