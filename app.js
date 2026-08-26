@@ -4,19 +4,17 @@
 
 async function login() {
   const passwordInput =
-    document.getElementById(
-      "passwordInput"
-    );
-
-  const password =
-    passwordInput
-      .value
-      .trim();
+    document.getElementById("passwordInput");
 
   const loginResult =
-    document.getElementById(
-      "loginResult"
-    );
+    document.getElementById("loginResult");
+
+  if (!passwordInput || !loginResult) {
+    return;
+  }
+
+  const password =
+    passwordInput.value.trim();
 
   if (!password) {
     loginResult.innerHTML = `
@@ -34,26 +32,27 @@ async function login() {
   `;
 
   try {
-    const response =
-      await fetch(
-        "/api/login",
-        {
-          method: "POST",
+    const response = await fetch("/api/login", {
+      method: "POST",
 
-          headers: {
-            "Content-Type":
-              "application/json"
-          },
+      headers: {
+        "Content-Type": "application/json"
+      },
 
-          body:
-            JSON.stringify({
-              password
-            })
-        }
+      body: JSON.stringify({
+        password
+      })
+    });
+
+    let data;
+
+    try {
+      data = await response.json();
+    } catch {
+      throw new Error(
+        "Invalid response from server"
       );
-
-    const data =
-      await response.json();
+    }
 
     if (
       !response.ok ||
@@ -65,13 +64,13 @@ async function login() {
       );
     }
 
+    // Simple browser session
     sessionStorage.setItem(
       "scannerAuthenticated",
       "true"
     );
 
     passwordInput.value = "";
-
     loginResult.innerHTML = "";
 
     showScanner();
@@ -81,11 +80,11 @@ async function login() {
     loginResult.innerHTML = `
       <div class="danger">
         ❌ ${escapeHtml(
-          error.message
+          error.message ||
+          "Login failed"
         )}
       </div>
     `;
-
   }
 }
 
@@ -97,25 +96,18 @@ async function login() {
 function showScanner() {
 
   const loginBox =
-    document.getElementById(
-      "loginBox"
-    );
+    document.getElementById("loginBox");
 
   const scannerBox =
-    document.getElementById(
-      "scannerBox"
-    );
+    document.getElementById("scannerBox");
 
   if (loginBox) {
-    loginBox.style.display =
-      "none";
+    loginBox.style.display = "none";
   }
 
   if (scannerBox) {
-    scannerBox.style.display =
-      "block";
+    scannerBox.style.display = "block";
   }
-
 }
 
 
@@ -135,7 +127,6 @@ function checkLogin() {
   ) {
     showScanner();
   }
-
 }
 
 
@@ -145,11 +136,16 @@ function checkLogin() {
 
 function extractTokenAddress(input) {
 
-  input =
-    input.trim();
+  input = String(input || "").trim();
 
+  if (!input) {
+    return "";
+  }
+
+  // If it is already a contract address
   if (
-    !input.includes("http")
+    !input.includes("http://") &&
+    !input.includes("https://")
   ) {
     return input;
   }
@@ -167,17 +163,15 @@ function extractTokenAddress(input) {
   // Generic URL fallback
   try {
 
-    const url =
-      new URL(input);
+    const url = new URL(input);
 
     const parts =
       url.pathname
         .split("/")
         .filter(Boolean);
 
-    if (
-      parts.length > 0
-    ) {
+    if (parts.length > 0) {
+
       return parts[
         parts.length - 1
       ];
@@ -188,7 +182,6 @@ function extractTokenAddress(input) {
   }
 
   return input;
-
 }
 
 
@@ -203,65 +196,37 @@ async function pasteToken() {
       "tokenInput"
     );
 
-  const result =
-    document.getElementById(
-      "result"
-    );
-
   if (!tokenInput) {
     return;
   }
 
   try {
 
-    // Read text from clipboard
+    // Modern clipboard API
     const text =
       await navigator.clipboard.readText();
 
     if (!text) {
 
-      if (result) {
-        result.innerHTML = `
-          <div class="card result">
-            <div class="danger">
-              Clipboard is empty.
-            </div>
-          </div>
-        `;
-      }
+      tokenInput.focus();
 
       return;
     }
 
-    // Paste into input
     tokenInput.value =
       text.trim();
 
-    // Focus input
     tokenInput.focus();
-
-    // Clear previous result when pasting new token
-    if (result) {
-      result.innerHTML = "";
-    }
 
   } catch (error) {
 
-    if (result) {
+    // Clipboard permission denied
+    alert(
+      "Unable to access clipboard. Please paste manually."
+    );
 
-      result.innerHTML = `
-        <div class="card result">
-          <div class="danger">
-            ❌ Unable to access clipboard.
-            Please paste manually.
-          </div>
-        </div>
-      `;
-
-    }
-
+    tokenInput.focus();
   }
-
 }
 
 
@@ -281,26 +246,25 @@ function clearScanner() {
       "result"
     );
 
-  // Clear token input
+  // Clear input
   if (tokenInput) {
     tokenInput.value = "";
   }
 
-  // Clear results
+  // Clear result
   if (result) {
     result.innerHTML = "";
   }
 
-  // Put cursor back in input
+  // Return cursor to input
   if (tokenInput) {
     tokenInput.focus();
   }
-
 }
 
 
 // =========================
-// SCAN
+// SCAN TOKEN
 // =========================
 
 async function scanToken() {
@@ -328,18 +292,19 @@ async function scanToken() {
   }
 
   const input =
-    tokenInput
-      .value
-      .trim();
+    tokenInput.value.trim();
 
+  // Empty input
   if (!input) {
 
     result.innerHTML = `
       <div class="card result">
+
         <div class="danger">
           Please enter a Pump.fun link
           or Contract Address.
         </div>
+
       </div>
     `;
 
@@ -349,15 +314,27 @@ async function scanToken() {
   }
 
   const token =
-    extractTokenAddress(
-      input
-    );
+    extractTokenAddress(input);
+
+  if (!token) {
+
+    result.innerHTML = `
+      <div class="card result">
+
+        <div class="danger">
+          Invalid token address.
+        </div>
+
+      </div>
+    `;
+
+    return;
+  }
 
   // Prevent multiple scans
   if (scanButton) {
 
-    scanButton.disabled =
-      true;
+    scanButton.disabled = true;
 
     scanButton.innerHTML =
       "⏳ Scanning...";
@@ -404,7 +381,6 @@ async function scanToken() {
       throw new Error(
         "Invalid response from server"
       );
-
     }
 
     if (
@@ -416,12 +392,9 @@ async function scanToken() {
         data.error ||
         "Scanner error"
       );
-
     }
 
-    displayScanResult(
-      data
-    );
+    displayScanResult(data);
 
   } catch (error) {
 
@@ -429,12 +402,10 @@ async function scanToken() {
       <div class="card result">
 
         <div class="danger">
-
           ❌ ${escapeHtml(
             error.message ||
             "Scanner error"
           )}
-
         </div>
 
       </div>
@@ -451,9 +422,7 @@ async function scanToken() {
         "🔍 Scan Token";
 
     }
-
   }
-
 }
 
 
@@ -527,7 +496,9 @@ function displayScanResult(data) {
         (${tokenSymbol})
       </h2>
 
+
       <hr>
+
 
       <!-- SCANNER RESULT -->
 
@@ -544,7 +515,9 @@ function displayScanResult(data) {
         ${score}/100
       </p>
 
+
       <hr>
+
 
       <!-- MARKET -->
 
@@ -600,7 +573,9 @@ function displayScanResult(data) {
           : ""
       }
 
+
       <hr>
+
 
       <!-- TRADING -->
 
@@ -636,7 +611,9 @@ function displayScanResult(data) {
         )}
       </p>
 
+
       <hr>
+
 
       <!-- HOLDERS -->
 
@@ -672,7 +649,9 @@ function displayScanResult(data) {
         )}
       </p>
 
+
       <hr>
+
 
       <!-- ANALYSIS -->
 
@@ -684,7 +663,9 @@ function displayScanResult(data) {
         scanner.analysis
       )}
 
+
       <hr>
+
 
       <!-- CONTRACT -->
 
@@ -694,8 +675,7 @@ function displayScanResult(data) {
 
       <p
         style="
-          word-break:
-          break-all;
+          word-break: break-all;
         "
       >
         ${tokenAddress}
@@ -704,7 +684,6 @@ function displayScanResult(data) {
     </div>
 
   `;
-
 }
 
 
@@ -724,7 +703,6 @@ function renderAnalysis(analysis) {
         No analysis available.
       </p>
     `;
-
   }
 
   return analysis
@@ -736,7 +714,6 @@ function renderAnalysis(analysis) {
       `
     )
     .join("");
-
 }
 
 
@@ -761,7 +738,6 @@ function formatNumber(value) {
       maximumFractionDigits: 2
     }
   );
-
 }
 
 
@@ -785,7 +761,6 @@ function formatInteger(value) {
   ).toLocaleString(
     "en-US"
   );
-
 }
 
 
@@ -805,14 +780,13 @@ function formatPercent(value) {
   }
 
   return (
-    number.toFixed(2)
-    .replace(
-      /\.00$/,
-      ""
-    )
-    + "%"
+    number
+      .toFixed(2)
+      .replace(
+        /\.00$/,
+        ""
+      ) + "%"
   );
-
 }
 
 
@@ -863,7 +837,6 @@ function formatPrice(value) {
       maximumFractionDigits: 6
     }
   );
-
 }
 
 
@@ -884,7 +857,6 @@ function escapeHtml(value) {
     );
 
   return div.innerHTML;
-
 }
 
 
@@ -918,12 +890,10 @@ function setupKeyboardEvents() {
           event.preventDefault();
 
           login();
-
         }
 
       }
     );
-
   }
 
   // Enter = Scan
@@ -940,14 +910,11 @@ function setupKeyboardEvents() {
           event.preventDefault();
 
           scanToken();
-
         }
 
       }
     );
-
   }
-
 }
 
 
