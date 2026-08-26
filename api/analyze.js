@@ -22,7 +22,6 @@ export default async function handler(req, res) {
       "https://mainnet.helius-rpc.com/?api-key=" +
       encodeURIComponent(heliusKey);
 
-    // Get the oldest transactions involving the token mint.
     const response = await fetch(rpcUrl, {
       method: "POST",
       headers: {
@@ -37,10 +36,7 @@ export default async function handler(req, res) {
           {
             transactionDetails: "full",
             sortOrder: "asc",
-            limit: 20,
-            filters: {
-              status: "succeeded"
-            }
+            limit: 20
           }
         ]
       })
@@ -57,27 +53,68 @@ export default async function handler(req, res) {
       });
     }
 
-    const transactions = data.result?.data || [];
+    const transactions =
+      data.result?.data || [];
 
-    const simplified = transactions.map((tx) => ({
-      signature: tx.signature || null,
-      slot: tx.slot || null,
-      blockTime: tx.blockTime || null,
-      feePayer: tx.feePayer || null,
-      transactionError: tx.err || null
-    }));
+    const simplified = transactions.map((tx) => {
+
+      const transaction = tx.transaction || {};
+
+      const message =
+        transaction.message || {};
+
+      const accountKeys =
+        message.accountKeys || [];
+
+      const feePayer =
+        accountKeys.find(
+          (account) =>
+            account.signer === true
+        )?.pubkey || null;
+
+      return {
+        signature:
+          tx.signature ||
+          tx.transaction?.signatures?.[0] ||
+          null,
+
+        slot:
+          tx.slot || null,
+
+        blockTime:
+          tx.blockTime || null,
+
+        feePayer,
+
+        success:
+          tx.meta?.err == null,
+
+        instructions:
+          message.instructions?.length || 0
+      };
+    });
 
     return res.status(200).json({
       success: true,
+
       token,
-      transactionCount: simplified.length,
-      transactions: simplified
+
+      transactionCount:
+        simplified.length,
+
+      firstTransaction:
+        simplified[0] || null,
+
+      transactions:
+        simplified
     });
 
   } catch (error) {
+
     return res.status(500).json({
       success: false,
       error: String(error)
     });
+
   }
 }
