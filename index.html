@@ -1,24 +1,202 @@
-<div class="button-group">
+<!DOCTYPE html>
+<html lang="en">
 
-  <button
-    class="scan-btn"
-    onclick="scanToken()"
+<head>
+
+  <meta charset="UTF-8">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
   >
-    🔍 Scan Token
-  </button>
 
-  <button
-    class="paste-btn"
-    onclick="pasteToken()"
+  <meta
+    name="theme-color"
+    content="#070b18"
   >
-    📋 Paste
-  </button>
 
-  <button
-    class="clear-btn"
-    onclick="clearScanner()"
+  <title>Pump.fun Scanner</title>
+
+  <link
+    rel="stylesheet"
+    href="style.css"
   >
-    ✖ Clear
-  </button>
 
-</div>
+</head>
+
+
+<body>
+
+
+  <!-- =========================================
+       ANIMATED BACKGROUND
+  ========================================== -->
+
+  <div class="background">
+
+    <div class="orb orb1"></div>
+
+    <div class="orb orb2"></div>
+
+    <div class="orb orb3"></div>
+
+  </div>
+
+
+  <!-- =========================================
+       MAIN
+  ========================================== -->
+
+  <div class="container">
+
+
+    <!-- =======================================
+         HEADER
+    ======================================== -->
+
+    <div class="header">
+
+      <h1>
+        🚀 Pump.fun Scanner
+      </h1>
+
+      <p class="subtitle">
+        Fast token analysis
+      </p>
+
+    </div>
+
+
+    <!-- =======================================
+         LOGIN
+    ======================================== -->
+
+    <div
+      id="loginBox"
+      class="card"
+    >
+
+      <h2>
+        🔐 Private Scanner
+      </h2>
+
+      <p class="subtitle">
+        Enter your password to continue.
+      </p>
+
+
+      <input
+        id="passwordInput"
+        type="password"
+        placeholder="Enter password"
+        autocomplete="off"
+      >
+
+
+      <button
+        class="login-btn"
+        onclick="login()"
+      >
+        🔓 Login
+      </button>
+
+
+      <div
+        id="loginResult"
+      ></div>
+
+    </div>
+
+
+    <!-- =======================================
+         SCANNER
+    ======================================== -->
+
+    <div
+      id="scannerBox"
+      style="display:none;"
+    >
+
+
+      <div class="card">
+
+
+        <div class="small">
+          TOKEN ADDRESS
+        </div>
+
+
+        <input
+          id="tokenInput"
+          type="text"
+          placeholder="Paste Pump.fun link or Contract Address"
+          autocomplete="off"
+          autocapitalize="off"
+          spellcheck="false"
+        >
+
+
+        <!-- ===================================
+             BUTTONS
+        ==================================== -->
+
+        <div class="button-group">
+
+
+          <button
+            class="scan-btn"
+            onclick="scanToken()"
+          >
+            🔍 Scan Token
+          </button>
+
+
+          <button
+            class="paste-btn"
+            onclick="pasteToken()"
+          >
+            📋 Paste
+          </button>
+
+
+          <button
+            class="clear-btn"
+            onclick="clearScanner()"
+          >
+            ✖ Clear
+          </button>
+
+
+        </div>
+
+
+      </div>
+
+
+      <!-- =====================================
+           RESULT
+      ====================================== -->
+
+      <div
+        id="result"
+      ></div>
+
+
+    </div>
+
+
+  </div>
+
+
+  <!-- =========================================
+       APP JS
+  ========================================== -->
+
+  <script
+    src="app.js"
+  ></script>
+
+
+</body>
+
+</html>
