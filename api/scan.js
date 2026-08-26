@@ -114,9 +114,15 @@ export default async function handler(req, res) {
       }
     });
 
-    const pairs = dexResponse.ok
-      ? await dexResponse.json()
-      : [];
+    let pairs = [];
+
+    if (dexResponse.ok) {
+      try {
+        pairs = await dexResponse.json();
+      } catch {
+        pairs = [];
+      }
+    }
 
     if (
       !Array.isArray(pairs) ||
@@ -304,19 +310,14 @@ export default async function handler(req, res) {
         scannedAt + 1
       );
 
-    const supplyValue =
-      supplyResult?.value || {};
-
     const supply =
       Number(
-        supplyValue?.uiAmountString ??
-        supplyValue?.uiAmount ??
-        0
+        supplyResult?.value?.uiAmount || 0
       );
 
     const decimals =
       Number(
-        supplyValue?.decimals || 0
+        supplyResult?.value?.decimals || 0
       );
 
     // ==================================================
@@ -352,31 +353,45 @@ export default async function handler(req, res) {
       freezeAuthority =
         parsed?.freezeAuthority || null;
     } catch {
-      // Don't fail scan
+      mintAuthority = null;
+      freezeAuthority = null;
     }
 
     // ==================================================
     // LARGEST TOKEN ACCOUNTS
     // ==================================================
 
-    const largestResult =
-      await rpc(
-        "getTokenLargestAccounts",
-        [
-          token,
-          {
-            commitment: "confirmed"
-          }
-        ],
-        scannedAt + 3
-      );
+    let largestAccounts = [];
 
-    const largestAccounts =
-      Array.isArray(
-        largestResult?.value
-      )
-        ? largestResult.value
-        : [];
+    try {
+      const largestResult =
+        await rpc(
+          "getTokenLargestAccounts",
+          [
+            token,
+            {
+              commitment: "confirmed"
+            }
+          ],
+          scannedAt + 3
+        );
+
+      // IMPORTANT:
+      // getTokenLargestAccounts returns:
+      // { value: [...] }
+      largestAccounts =
+        Array.isArray(
+          largestResult?.value
+        )
+          ? largestResult.value
+          : [];
+    } catch {
+      largestAccounts = [];
+    }
+
+    // ==================================================
+    // TOKEN ACCOUNT ADDRESSES
+    // ==================================================
 
     const addresses =
       largestAccounts
@@ -387,44 +402,47 @@ export default async function handler(req, res) {
         .filter(Boolean);
 
     // ==================================================
-    // OWNERS
-    //
-    // IMPORTANT:
-    // getMultipleAccounts RETURNS:
-    //
-    // {
-    //   value: [...]
-    // }
-    //
-    // The previous version was using the entire
-    // result directly as an array.
-    // That caused ownerAccounts[index] to be undefined
-    // and therefore HOLDERS = 0.
+    // GET TOKEN ACCOUNT OWNERS
     // ==================================================
 
     let ownerAccounts = [];
 
     if (addresses.length > 0) {
+      try {
+        const ownerAccountsResult =
+          await rpc(
+            "getMultipleAccounts",
+            [
+              addresses,
+              {
+                encoding: "jsonParsed",
+                commitment: "confirmed"
+              }
+            ],
+            scannedAt + 4
+          );
 
-      const ownerAccountsResult =
-        await rpc(
-          "getMultipleAccounts",
-          [
-            addresses,
-            {
-              encoding: "jsonParsed",
-              commitment: "confirmed"
-            }
-          ],
-          scannedAt + 4
-        );
+        // ==================================================
+        // IMPORTANT FIX
+        //
+        // getMultipleAccounts returns:
+        //
+        // {
+        //   value: [...]
+        // }
+        //
+        // NOT [...]
+        // ==================================================
 
-      ownerAccounts =
-        Array.isArray(
-          ownerAccountsResult?.value
-        )
-          ? ownerAccountsResult.value
-          : [];
+        ownerAccounts =
+          Array.isArray(
+            ownerAccountsResult?.value
+          )
+            ? ownerAccountsResult.value
+            : [];
+      } catch {
+        ownerAccounts = [];
+      }
     }
 
     // ==================================================
@@ -440,26 +458,20 @@ export default async function handler(req, res) {
         const accountInfo =
           ownerAccounts[index];
 
-        const parsedInfo =
+        const owner =
           accountInfo
             ?.data
             ?.parsed
-            ?.info;
-
-        const owner =
-          parsedInfo?.owner ||
-          null;
+            ?.info
+            ?.owner;
 
         const amount =
           Number(
-            account?.uiAmountString ??
-            account?.uiAmount ??
-            0
+            account?.uiAmount || 0
           );
 
         if (
           !owner ||
-          !Number.isFinite(amount) ||
           amount <= 0
         ) {
           return;
@@ -587,7 +599,6 @@ export default async function handler(req, res) {
     let enhancedTransactions = [];
 
     try {
-
       const txUrl =
         "https://api.helius.xyz/v0/addresses/" +
         encodeURIComponent(token) +
@@ -609,24 +620,18 @@ export default async function handler(req, res) {
         );
 
       if (txResponse.ok) {
-
         const txData =
           await txResponse.json();
 
         if (
           Array.isArray(txData)
         ) {
-
           enhancedTransactions =
             txData;
-
         }
       }
-
     } catch {
-
       enhancedTransactions = [];
-
     }
 
     // ==================================================
@@ -731,7 +736,6 @@ export default async function handler(req, res) {
 
         if (
           !to ||
-          !Number.isFinite(amount) ||
           amount <= 0
         ) {
           continue;
@@ -777,11 +781,8 @@ export default async function handler(req, res) {
           const existing =
             firstBuyerMap.get(to);
 
-          existing.amount +=
-            amount;
-
-          existing.transactions +=
-            1;
+          existing.amount += amount;
+          existing.transactions += 1;
         }
       }
     }
@@ -1730,24 +1731,27 @@ export default async function handler(req, res) {
       holderAccounts:
         holders.length,
 
-      holderAccountsScanned:
-        addresses.length,
+      holderTokenAccountsScanned:
+        largestAccounts.length,
 
       holderOwnersResolved:
         ownerAccounts.filter(
-          Boolean
+          account =>
+            Boolean(
+              account
+            )
         ).length,
 
-      holderSource:
-        holders.length > 0
-          ? "Helius RPC"
-          : "-",
-
-      holdersDetected:
+      holderDistributionAvailable:
         holders.length > 0,
 
+      source:
+        holders.length > 0
+          ? "Helius RPC"
+          : "Helius RPC returned no resolved holder owners",
+
       note:
-        "Holder distribution is based on the largest token accounts returned by Solana RPC. Creator and first-buyer fields may be unavailable for very new tokens or incomplete transaction history."
+        "Holder distribution currently represents the largest token accounts returned by Solana RPC, with their token-account owners resolved through getMultipleAccounts."
     };
 
     // ==================================================
@@ -1910,19 +1914,6 @@ export default async function handler(req, res) {
         whale5,
 
         uniqueOwners,
-
-        accountsScanned:
-          addresses.length,
-
-        ownersResolved:
-          ownerAccounts.filter(
-            Boolean
-          ).length,
-
-        dataSource:
-          holders.length > 0
-            ? "Helius RPC"
-            : "-",
 
         mintAuthority,
 
