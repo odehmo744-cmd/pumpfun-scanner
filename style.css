@@ -1,5 +1,13 @@
+/* =========================================
+   RESET
+========================================= */
+
 * {
   box-sizing: border-box;
+}
+
+html {
+  min-height: 100%;
 }
 
 body {
@@ -42,6 +50,60 @@ body {
 }
 
 
+/* Moving grid */
+
+.background::before {
+  content: "";
+
+  position: absolute;
+
+  inset: -50%;
+
+  background-image:
+    linear-gradient(
+      rgba(0, 212, 255, 0.04) 1px,
+      transparent 1px
+    ),
+    linear-gradient(
+      90deg,
+      rgba(0, 212, 255, 0.04) 1px,
+      transparent 1px
+    );
+
+  background-size:
+    50px 50px;
+
+  transform:
+    perspective(500px)
+    rotateX(55deg)
+    translateY(-100px);
+
+  animation:
+    gridMove 20s linear infinite;
+
+  opacity: 0.5;
+}
+
+
+@keyframes gridMove {
+
+  from {
+    background-position:
+      0 0;
+  }
+
+  to {
+    background-position:
+      0 50px;
+  }
+
+}
+
+
+/* =========================================
+   GLOWING ORBS
+========================================= */
+
 .orb {
   position: absolute;
 
@@ -54,6 +116,8 @@ body {
     blur(90px);
 
   opacity: 0.35;
+
+  pointer-events: none;
 
   animation:
     float 12s infinite ease-in-out;
@@ -111,30 +175,42 @@ body {
 @keyframes float {
 
   0% {
-
     transform:
       translate(0, 0)
       scale(1);
+  }
 
+  25% {
+    transform:
+      translate(
+        80px,
+        40px
+      )
+      scale(1.1);
   }
 
   50% {
-
     transform:
       translate(
         120px,
         80px
       )
       scale(1.2);
+  }
 
+  75% {
+    transform:
+      translate(
+        40px,
+        120px
+      )
+      scale(1.05);
   }
 
   100% {
-
     transform:
       translate(0, 0)
       scale(1);
-
   }
 
 }
@@ -156,20 +232,53 @@ body {
 }
 
 
+/* =========================================
+   HEADER
+========================================= */
+
 .header {
   text-align: center;
 
   margin-bottom:
     30px;
+
+  animation:
+    headerAppear
+    0.7s ease;
+}
+
+
+@keyframes headerAppear {
+
+  from {
+    opacity: 0;
+
+    transform:
+      translateY(-20px);
+  }
+
+  to {
+    opacity: 1;
+
+    transform:
+      translateY(0);
+  }
+
 }
 
 
 h1 {
-  margin-bottom:
-    10px;
+  margin:
+    0 0 10px;
 
   font-size:
-    32px;
+    34px;
+
+  font-weight:
+    800;
+
+  letter-spacing:
+    -0.5px;
 
   text-shadow:
     0 0 30px
@@ -177,7 +286,7 @@ h1 {
       0,
       212,
       255,
-      0.4
+      0.45
     );
 }
 
@@ -185,10 +294,16 @@ h1 {
 h2 {
   margin-top:
     0;
+
+  line-height:
+    1.4;
 }
 
 
 .subtitle {
+  margin:
+    0;
+
   color:
     #aeb8d0;
 
@@ -202,7 +317,6 @@ h2 {
 ========================================= */
 
 .card {
-
   padding:
     25px;
 
@@ -222,11 +336,20 @@ h2 {
     );
 
   background:
-    rgba(
-      10,
-      15,
-      35,
-      0.65
+    linear-gradient(
+      135deg,
+      rgba(
+        18,
+        27,
+        55,
+        0.78
+      ),
+      rgba(
+        6,
+        10,
+        25,
+        0.72
+      )
     );
 
   backdrop-filter:
@@ -250,7 +373,6 @@ h2 {
 
 
 .card:hover {
-
   border-color:
     rgba(
       0,
@@ -259,35 +381,32 @@ h2 {
       0.3
     );
 
+  transform:
+    translateY(-2px);
 }
 
 
 .result {
-
   animation:
-    appear 0.4s ease;
-
+    appear
+    0.4s ease;
 }
 
 
 @keyframes appear {
 
   from {
-
     opacity: 0;
 
     transform:
       translateY(15px);
-
   }
 
   to {
-
     opacity: 1;
 
     transform:
       translateY(0);
-
   }
 
 }
@@ -298,7 +417,6 @@ h2 {
 ========================================= */
 
 input {
-
   width: 100%;
 
   padding:
@@ -330,7 +448,7 @@ input {
       0,
       0,
       0,
-      0.25
+      0.3
     );
 
   transition:
@@ -338,8 +456,18 @@ input {
 }
 
 
-input:focus {
+input:hover {
+  border-color:
+    rgba(
+      0,
+      212,
+      255,
+      0.3
+    );
+}
 
+
+input:focus {
   border-color:
     #00d4ff;
 
@@ -349,17 +477,33 @@ input:focus {
       0,
       212,
       255,
-      0.2
+      0.22
     );
-
 }
 
 
 input::placeholder {
-
   color:
     #77809a;
+}
 
+
+/* =========================================
+   BUTTON GROUP
+========================================= */
+
+.button-group {
+  display:
+    flex;
+
+  gap:
+    10px;
+
+  margin-top:
+    15px;
+
+  flex-wrap:
+    wrap;
 }
 
 
@@ -367,22 +511,7 @@ input::placeholder {
    BUTTONS
 ========================================= */
 
-.button-group {
-
-  display:
-    flex;
-
-  gap:
-    12px;
-
-  margin-top:
-    15px;
-
-}
-
-
 button {
-
   border:
     none;
 
@@ -407,13 +536,39 @@ button {
   transition:
     0.25s;
 
+  -webkit-tap-highlight-color:
+    transparent;
 }
 
 
-.scan-btn {
+button:active {
+  transform:
+    scale(0.97);
+}
 
+
+button:disabled {
+  opacity:
+    0.6;
+
+  cursor:
+    not-allowed;
+
+  transform:
+    none;
+}
+
+
+/* =========================================
+   SCAN BUTTON
+========================================= */
+
+.scan-btn {
   flex:
     1;
+
+  min-width:
+    160px;
 
   background:
     linear-gradient(
@@ -430,12 +585,10 @@ button {
       255,
       0.3
     );
-
 }
 
 
-.scan-btn:hover {
-
+.scan-btn:hover:not(:disabled) {
   transform:
     translateY(-2px);
 
@@ -447,18 +600,58 @@ button {
       255,
       0.5
     );
-
 }
 
 
-.clear-btn {
+/* =========================================
+   PASTE BUTTON
+========================================= */
 
+.paste-btn {
+  background:
+    linear-gradient(
+      135deg,
+      #7c3aed,
+      #5b21b6
+    );
+
+  box-shadow:
+    0 8px 20px
+    rgba(
+      124,
+      58,
+      237,
+      0.25
+    );
+}
+
+
+.paste-btn:hover {
+  transform:
+    translateY(-2px);
+
+  box-shadow:
+    0 12px 28px
+    rgba(
+      124,
+      58,
+      237,
+      0.4
+    );
+}
+
+
+/* =========================================
+   CLEAR BUTTON
+========================================= */
+
+.clear-btn {
   background:
     rgba(
       255,
       70,
       70,
-      0.15
+      0.12
     );
 
   border:
@@ -467,30 +660,33 @@ button {
       255,
       70,
       70,
-      0.35
+      0.4
     );
 
+  color:
+    #ff9a9a;
 }
 
 
 .clear-btn:hover {
-
   background:
     rgba(
       255,
       70,
       70,
-      0.3
+      0.25
     );
 
   transform:
     translateY(-2px);
-
 }
 
 
-.login-btn {
+/* =========================================
+   LOGIN BUTTON
+========================================= */
 
+.login-btn {
   width:
     100%;
 
@@ -504,23 +700,52 @@ button {
       #2563eb
     );
 
+  box-shadow:
+    0 8px 25px
+    rgba(
+      80,
+      70,
+      255,
+      0.25
+    );
 }
 
 
 .login-btn:hover {
-
   transform:
     translateY(-2px);
 
+  box-shadow:
+    0 12px 30px
+    rgba(
+      80,
+      70,
+      255,
+      0.45
+    );
 }
 
 
 /* =========================================
-   RESULT
+   RESULTS
 ========================================= */
 
-hr {
+.result p {
+  line-height:
+    1.6;
 
+  margin:
+    10px 0;
+}
+
+
+.result strong {
+  color:
+    #dbeafe;
+}
+
+
+hr {
   border:
     none;
 
@@ -528,21 +753,28 @@ hr {
     1px;
 
   background:
-    rgba(
-      255,
-      255,
-      255,
-      0.1
+    linear-gradient(
+      90deg,
+      transparent,
+      rgba(
+        255,
+        255,
+        255,
+        0.15
+      ),
+      transparent
     );
 
   margin:
     22px 0;
-
 }
 
 
-.small {
+/* =========================================
+   SMALL TEXT
+========================================= */
 
+.small {
   color:
     #7f8aa5;
 
@@ -552,11 +784,16 @@ hr {
   letter-spacing:
     1px;
 
+  text-transform:
+    uppercase;
 }
 
 
-.danger {
+/* =========================================
+   ERROR
+========================================= */
 
+.danger {
   margin-top:
     15px;
 
@@ -567,16 +804,81 @@ hr {
     10px;
 
   color:
-    #ff7777;
+    #ff8a8a;
 
   background:
     rgba(
       255,
       0,
       0,
-      0.08
+      0.1
     );
 
+  border:
+    1px solid
+    rgba(
+      255,
+      70,
+      70,
+      0.2
+    );
+}
+
+
+/* =========================================
+   SUCCESS / STATUS
+========================================= */
+
+.success {
+  margin-top:
+    15px;
+
+  padding:
+    12px;
+
+  border-radius:
+    10px;
+
+  color:
+    #6fffc0;
+
+  background:
+    rgba(
+      0,
+      255,
+      153,
+      0.08
+    );
+}
+
+
+/* =========================================
+   SCROLLBAR
+========================================= */
+
+::-webkit-scrollbar {
+  width:
+    8px;
+}
+
+
+::-webkit-scrollbar-track {
+  background:
+    #070b18;
+}
+
+
+::-webkit-scrollbar-thumb {
+  background:
+    rgba(
+      0,
+      212,
+      255,
+      0.35
+    );
+
+  border-radius:
+    10px;
 }
 
 
@@ -584,55 +886,135 @@ hr {
    MOBILE
 ========================================= */
 
-@media
-(max-width: 600px) {
+@media (max-width: 600px) {
 
   .container {
-
     padding:
       25px 15px 60px;
-
   }
 
 
   h1 {
-
     font-size:
-      27px;
+      28px;
+  }
 
+
+  h2 {
+    font-size:
+      21px;
   }
 
 
   .card {
-
     padding:
       18px;
 
+    border-radius:
+      17px;
+  }
+
+
+  .card:hover {
+    transform:
+      none;
+  }
+
+
+  input {
+    padding:
+      15px;
+
+    font-size:
+      16px;
   }
 
 
   .button-group {
-
     flex-direction:
       column;
-
   }
 
 
   .scan-btn,
+  .paste-btn,
   .clear-btn {
-
     width:
       100%;
+  }
 
+
+  .scan-btn {
+    min-width:
+      auto;
+  }
+
+
+  button {
+    min-height:
+      50px;
   }
 
 
   .orb {
-
     filter:
       blur(100px);
 
+    opacity:
+      0.25;
+  }
+
+
+  .orb1 {
+    width:
+      350px;
+
+    height:
+      350px;
+  }
+
+
+  .orb2 {
+    width:
+      350px;
+
+    height:
+      350px;
+  }
+
+
+  .background::before {
+    background-size:
+      40px 40px;
+  }
+
+}
+
+
+/* =========================================
+   SMALL PHONES
+========================================= */
+
+@media (max-width: 380px) {
+
+  .container {
+    padding-left:
+      10px;
+
+    padding-right:
+      10px;
+  }
+
+
+  h1 {
+    font-size:
+      25px;
+  }
+
+
+  .card {
+    padding:
+      15px;
   }
 
 }
