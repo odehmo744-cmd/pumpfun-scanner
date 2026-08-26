@@ -65,7 +65,6 @@ async function login() {
       );
     }
 
-    // Simple browser session
     sessionStorage.setItem(
       "scannerAuthenticated",
       "true"
@@ -165,8 +164,7 @@ function extractTokenAddress(input) {
     return pumpMatch[1];
   }
 
-  // Generic URL fallback:
-  // Try to extract the last path section.
+  // Generic URL fallback
   try {
 
     const url =
@@ -190,6 +188,79 @@ function extractTokenAddress(input) {
   }
 
   return input;
+
+}
+
+
+// =========================
+// PASTE TOKEN
+// =========================
+
+async function pasteToken() {
+
+  const tokenInput =
+    document.getElementById(
+      "tokenInput"
+    );
+
+  const result =
+    document.getElementById(
+      "result"
+    );
+
+  if (!tokenInput) {
+    return;
+  }
+
+  try {
+
+    // Read text from clipboard
+    const text =
+      await navigator.clipboard.readText();
+
+    if (!text) {
+
+      if (result) {
+        result.innerHTML = `
+          <div class="card result">
+            <div class="danger">
+              Clipboard is empty.
+            </div>
+          </div>
+        `;
+      }
+
+      return;
+    }
+
+    // Paste into input
+    tokenInput.value =
+      text.trim();
+
+    // Focus input
+    tokenInput.focus();
+
+    // Clear previous result when pasting new token
+    if (result) {
+      result.innerHTML = "";
+    }
+
+  } catch (error) {
+
+    if (result) {
+
+      result.innerHTML = `
+        <div class="card result">
+          <div class="danger">
+            ❌ Unable to access clipboard.
+            Please paste manually.
+          </div>
+        </div>
+      `;
+
+    }
+
+  }
 
 }
 
@@ -456,9 +527,7 @@ function displayScanResult(data) {
         (${tokenSymbol})
       </h2>
 
-
       <hr>
-
 
       <!-- SCANNER RESULT -->
 
@@ -475,9 +544,7 @@ function displayScanResult(data) {
         ${score}/100
       </p>
 
-
       <hr>
-
 
       <!-- MARKET -->
 
@@ -533,9 +600,7 @@ function displayScanResult(data) {
           : ""
       }
 
-
       <hr>
-
 
       <!-- TRADING -->
 
@@ -571,9 +636,7 @@ function displayScanResult(data) {
         )}
       </p>
 
-
       <hr>
-
 
       <!-- HOLDERS -->
 
@@ -609,9 +672,7 @@ function displayScanResult(data) {
         )}
       </p>
 
-
       <hr>
-
 
       <!-- ANALYSIS -->
 
@@ -623,9 +684,7 @@ function displayScanResult(data) {
         scanner.analysis
       )}
 
-
       <hr>
-
 
       <!-- CONTRACT -->
 
