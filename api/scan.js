@@ -1,8 +1,10 @@
 export default async function handler(req, res) {
+  const scannedAt = Date.now();
+
   try {
-    // =========================================
+    // =========================
     // NO CACHE
-    // =========================================
+    // =========================
 
     res.setHeader(
       "Cache-Control",
@@ -12,11 +14,9 @@ export default async function handler(req, res) {
     res.setHeader("Pragma", "no-cache");
     res.setHeader("Expires", "0");
 
-    const scannedAt = Date.now();
-
-    // =========================================
+    // =========================
     // TOKEN
-    // =========================================
+    // =========================
 
     const token = String(
       req.query?.token || ""
@@ -28,6 +28,10 @@ export default async function handler(req, res) {
         error: "Missing token address"
       });
     }
+
+    // =========================
+    // HELIUS
+    // =========================
 
     const heliusKey =
       process.env.HELIUS_API_KEY;
@@ -44,64 +48,69 @@ export default async function handler(req, res) {
       "https://mainnet.helius-rpc.com/?api-key=" +
       encodeURIComponent(heliusKey);
 
-    // =========================================
-    // HELPER: FETCH JSON
-    // =========================================
+    // =========================
+    // HELIUS RPC HELPER
+    // =========================
 
-    async function fetchJson(
-      url,
-      options = {}
-    ) {
+    async function helius(method, params, id) {
       const response = await fetch(
-        url,
+        rpcUrl,
         {
-          ...options,
+          method: "POST",
           cache: "no-store",
           headers: {
+            "Content-Type": "application/json",
             "Cache-Control":
-              "no-cache, no-store, max-age=0",
-            ...(options.headers || {})
-          }
+              "no-cache, no-store, max-age=0"
+          },
+          body: JSON.stringify({
+            jsonrpc: "2.0",
+            id,
+            method,
+            params
+          })
         }
       );
 
-      const text =
-        await response.text();
+      const data =
+        await response.json();
 
-      let data;
-
-      try {
-        data = JSON.parse(text);
-      } catch {
+      if (data.error) {
         throw new Error(
-          "Invalid response from external API"
+          data.error.message ||
+          `Helius ${method} error`
         );
       }
 
-      return {
-        ok: response.ok,
-        data
-      };
+      return data.result;
     }
 
-    // =========================================
+    // ==================================================
     // DEXSCREENER
-    // =========================================
+    // ==================================================
 
-    const dexUrl =
+    const dexResponse = await fetch(
       "https://api.dexscreener.com/tokens/v1/solana/" +
-      encodeURIComponent(token);
-
-    const dexResult =
-      await fetchJson(dexUrl);
+        encodeURIComponent(token),
+      {
+        method: "GET",
+        cache: "no-store",
+        headers: {
+          "Cache-Control":
+            "no-cache, no-store, max-age=0"
+        }
+      }
+    );
 
     const pairs =
-      dexResult.ok &&
-      Array.isArray(dexResult.data)
-        ? dexResult.data
+      dexResponse.ok
+        ? await dexResponse.json()
         : [];
 
-    if (pairs.length === 0) {
+    if (
+      !Array.isArray(pairs) ||
+      pairs.length === 0
+    ) {
       return res.status(404).json({
         success: false,
         error:
@@ -109,10 +118,7 @@ export default async function handler(req, res) {
       });
     }
 
-    // =========================================
-    // BEST PAIR
-    // =========================================
-
+    // Best liquidity pair
     const pair =
       pairs
         .filter(
@@ -131,9 +137,9 @@ export default async function handler(req, res) {
             )
         )[0] || pairs[0];
 
-    // =========================================
+    // ==================================================
     // MARKET
-    // =========================================
+    // ==================================================
 
     const liquidity =
       Number(
@@ -145,26 +151,6 @@ export default async function handler(req, res) {
         pair?.volume?.h24 || 0
       );
 
-    const volume6h =
-      Number(
-        pair?.volume?.h6 || 0
-      );
-
-    const volume1h =
-      Number(
-        pair?.volume?.h1 || 0
-      );
-
-    const volume5m =
-      Number(
-        pair?.volume?.m5 || 0
-      );
-
-    const priceUsd =
-      Number(
-        pair?.priceUsd || 0
-      );
-
     const marketCap =
       Number(
         pair?.marketCap ??
@@ -172,19 +158,9 @@ export default async function handler(req, res) {
         0
       );
 
-    const priceChange5m =
+    const priceUsd =
       Number(
-        pair?.priceChange?.m5 || 0
-      );
-
-    const priceChange1h =
-      Number(
-        pair?.priceChange?.h1 || 0
-      );
-
-    const priceChange6h =
-      Number(
-        pair?.priceChange?.h6 || 0
+        pair?.priceUsd || 0
       );
 
     const priceChange24h =
@@ -197,55 +173,9 @@ export default async function handler(req, res) {
         ? volume24h / liquidity
         : 0;
 
-    // =========================================
-    // PAIR AGE
-    // =========================================
-
-    const pairCreatedAt =
-      Number(
-        pair?.pairCreatedAt || 0
-      );
-
-    let pairAgeMinutes = null;
-    let pairAgeHours = null;
-
-    if (pairCreatedAt > 0) {
-      const ageMs =
-        Math.max(
-          0,
-          scannedAt - pairCreatedAt
-        );
-
-      pairAgeMinutes =
-        Number(
-          (
-            ageMs /
-            60000
-          ).toFixed(1)
-        );
-
-      pairAgeHours =
-        Number(
-          (
-            ageMs /
-            3600000
-          ).toFixed(2)
-        );
-    }
-
-    // =========================================
+    // ==================================================
     // TRADING
-    // =========================================
-
-    const buys5m =
-      Number(
-        pair?.txns?.m5?.buys || 0
-      );
-
-    const sells5m =
-      Number(
-        pair?.txns?.m5?.sells || 0
-      );
+    // ==================================================
 
     const buys1h =
       Number(
@@ -257,99 +187,26 @@ export default async function handler(req, res) {
         pair?.txns?.h1?.sells || 0
       );
 
-    const buys6h =
-      Number(
-        pair?.txns?.h6?.buys || 0
-      );
-
-    const sells6h =
-      Number(
-        pair?.txns?.h6?.sells || 0
-      );
-
-    const buys24h =
-      Number(
-        pair?.txns?.h24?.buys || 0
-      );
-
-    const sells24h =
-      Number(
-        pair?.txns?.h24?.sells || 0
-      );
-
     const totalTrades =
       buys1h + sells1h;
-
-    const totalTrades5m =
-      buys5m + sells5m;
 
     const buyPressure =
       totalTrades > 0
         ? Number(
             (
-              (buys1h /
-                totalTrades) *
+              buys1h /
+              totalTrades *
               100
             ).toFixed(2)
           )
         : 0;
 
-    const buyPressure5m =
-      totalTrades5m > 0
-        ? Number(
-            (
-              (buys5m /
-                totalTrades5m) *
-              100
-            ).toFixed(2)
-          )
-        : 0;
-
-    // =========================================
-    // SOLANA SUPPLY
-    // =========================================
-
-    async function rpcCall(
-      method,
-      params,
-      id
-    ) {
-      const result =
-        await fetchJson(
-          rpcUrl,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type":
-                "application/json"
-            },
-            body: JSON.stringify({
-              jsonrpc: "2.0",
-              id,
-              method,
-              params
-            })
-          }
-        );
-
-      if (
-        result.data?.error
-      ) {
-        throw new Error(
-          result.data.error.message ||
-          `${method} failed`
-        );
-      }
-
-      return result.data;
-    }
-
-    // =========================================
+    // ==================================================
     // SUPPLY
-    // =========================================
+    // ==================================================
 
-    const supplyData =
-      await rpcCall(
+    const supplyResult =
+      await helius(
         "getTokenSupply",
         [
           token,
@@ -363,140 +220,196 @@ export default async function handler(req, res) {
 
     const supply =
       Number(
-        supplyData.result
-          ?.value
-          ?.uiAmount || 0
+        supplyResult?.value?.uiAmount || 0
       );
 
-    // =========================================
-    // LARGEST ACCOUNTS
-    // =========================================
+    // ==================================================
+    // ALL TOKEN ACCOUNTS / HOLDERS
+    //
+    // Helius getTokenAccounts
+    // ==================================================
 
-    const largestData =
-      await rpcCall(
-        "getTokenLargestAccounts",
-        [
-          token,
-          {
-            commitment:
-              "confirmed"
-          }
-        ],
-        scannedAt + 2
-      );
+    let allTokenAccounts = [];
 
-    const largestAccounts =
-      largestData.result
-        ?.value || [];
+    let page = 1;
 
-    const addresses =
-      largestAccounts.map(
-        account =>
-          account.address
-      );
+    const MAX_HOLDER_PAGES = 10;
 
-    // =========================================
-    // OWNERS
-    // =========================================
-
-    let ownerAccounts = [];
-
-    if (
-      addresses.length > 0
+    while (
+      page <= MAX_HOLDER_PAGES
     ) {
-      const ownersData =
-        await rpcCall(
-          "getMultipleAccounts",
-          [
-            addresses,
-            {
-              encoding:
-                "jsonParsed",
-              commitment:
-                "confirmed"
+      const holderResult =
+        await helius(
+          "getTokenAccounts",
+          {
+            mint: token,
+            page,
+            limit: 1000,
+            options: {
+              showZeroBalance: false
             }
-          ],
-          scannedAt + 3
+          },
+          scannedAt + 10 + page
         );
 
-      ownerAccounts =
-        ownersData.result
-          ?.value || [];
+      const accounts =
+        holderResult?.token_accounts ||
+        [];
+
+      if (
+        !Array.isArray(accounts) ||
+        accounts.length === 0
+      ) {
+        break;
+      }
+
+      allTokenAccounts =
+        allTokenAccounts.concat(
+          accounts
+        );
+
+      if (
+        accounts.length < 1000
+      ) {
+        break;
+      }
+
+      page++;
     }
 
-    // =========================================
-    // HOLDERS
-    // =========================================
+    // ==================================================
+    // AGGREGATE BY OWNER
+    // ==================================================
 
-    const holdersMap =
+    const ownerMap =
       new Map();
 
-    largestAccounts.forEach(
-      (account, index) => {
-        const accountInfo =
-          ownerAccounts[index];
+    for (
+      const account of allTokenAccounts
+    ) {
+      const owner =
+        account?.owner;
 
-        const owner =
-          accountInfo
-            ?.data
-            ?.parsed
-            ?.info
-            ?.owner;
-
-        const amount =
-          Number(
-            account.uiAmount || 0
-          );
-
-        if (!owner) {
-          return;
-        }
-
-        holdersMap.set(
-          owner,
-          (
-            holdersMap.get(owner) ||
-            0
-          ) + amount
+      const rawAmount =
+        Number(
+          account?.amount || 0
         );
+
+      if (
+        !owner ||
+        !Number.isFinite(rawAmount) ||
+        rawAmount <= 0
+      ) {
+        continue;
       }
-    );
+
+      const previous =
+        ownerMap.get(owner) || 0;
+
+      ownerMap.set(
+        owner,
+        previous + rawAmount
+      );
+    }
+
+    // ==================================================
+    // DECIMALS
+    // ==================================================
+
+    let decimals = 0;
+
+    try {
+      const asset =
+        await helius(
+          "getAsset",
+          {
+            id: token,
+            displayOptions: {
+              showFungible: true
+            }
+          },
+          scannedAt + 100
+        );
+
+      decimals =
+        Number(
+          asset?.content
+            ?.metadata
+            ?.decimals ??
+          asset?.token_info
+            ?.decimals ??
+          0
+        );
+    } catch {
+      decimals = 0;
+    }
+
+    // ==================================================
+    // BUILD HOLDERS
+    // ==================================================
+
+    const multiplier =
+      Math.pow(
+        10,
+        decimals
+      );
 
     const holders =
       Array.from(
-        holdersMap.entries()
+        ownerMap.entries()
       )
         .map(
-          ([address, amount]) => ({
-            address,
-            amount,
-            percentage:
+          ([address, rawAmount]) => {
+
+            const amount =
+              decimals > 0
+                ? rawAmount /
+                  multiplier
+                : rawAmount;
+
+            const percentage =
               supply > 0
-                ? Number(
-                    (
-                      (amount /
-                        supply) *
-                      100
-                    ).toFixed(4)
+                ? (
+                    amount /
+                    supply *
+                    100
                   )
-                : 0
-          })
+                : 0;
+
+            return {
+              address,
+              amount,
+              percentage:
+                Number(
+                  percentage.toFixed(4)
+                )
+            };
+          }
+        )
+        .filter(
+          holder =>
+            holder.amount > 0
         )
         .sort(
           (a, b) =>
-            b.amount - a.amount
+            b.amount -
+            a.amount
         );
 
+    // ==================================================
+    // HOLDER METRICS
+    // ==================================================
+
     const top1Percentage =
-      holders[0]
-        ?.percentage || 0;
+      holders[0]?.percentage || 0;
 
     const top5Percentage =
       holders
         .slice(0, 5)
         .reduce(
-          (sum, h) =>
-            sum + h.percentage,
+          (sum, holder) =>
+            sum +
+            holder.percentage,
           0
         );
 
@@ -504,21 +417,80 @@ export default async function handler(req, res) {
       holders
         .slice(0, 10)
         .reduce(
-          (sum, h) =>
-            sum + h.percentage,
+          (sum, holder) =>
+            sum +
+            holder.percentage,
           0
         );
 
-    // =========================================
+    const top20Percentage =
+      holders
+        .slice(0, 20)
+        .reduce(
+          (sum, holder) =>
+            sum +
+            holder.percentage,
+          0
+        );
+
+    const uniqueOwners =
+      holders.length;
+
+    // ==================================================
+    // WHALE ANALYSIS
+    // ==================================================
+
+    const whale10 =
+      holders.filter(
+        h => h.percentage >= 10
+      ).length;
+
+    const whale5 =
+      holders.filter(
+        h => h.percentage >= 5
+      ).length;
+
+    // ==================================================
+    // DISTRIBUTION SCORE
+    // ==================================================
+
+    let distributionScore = 0;
+
+    if (top1Percentage <= 5) {
+      distributionScore += 15;
+    } else if (
+      top1Percentage <= 10
+    ) {
+      distributionScore += 12;
+    } else if (
+      top1Percentage <= 20
+    ) {
+      distributionScore += 8;
+    } else if (
+      top1Percentage <= 30
+    ) {
+      distributionScore += 4;
+    }
+
+    if (top5Percentage <= 25) {
+      distributionScore += 10;
+    } else if (
+      top5Percentage <= 40
+    ) {
+      distributionScore += 7;
+    } else if (
+      top5Percentage <= 55
+    ) {
+      distributionScore += 4;
+    }
+
+    // ==================================================
     // RED FLAGS
-    // =========================================
+    // ==================================================
 
     const redFlags = [];
 
-    // Liquidity
-    if (
-      liquidity < 10000
-    ) {
+    if (liquidity < 10000) {
       redFlags.push(
         "Very low liquidity"
       );
@@ -530,37 +502,6 @@ export default async function handler(req, res) {
       );
     }
 
-    // Top holder
-    if (
-      top1Percentage > 30
-    ) {
-      redFlags.push(
-        "Top holder concentration is extremely high"
-      );
-    } else if (
-      top1Percentage > 20
-    ) {
-      redFlags.push(
-        "Top holder concentration is elevated"
-      );
-    }
-
-    // Top 5
-    if (
-      top5Percentage > 65
-    ) {
-      redFlags.push(
-        "Top 5 holders control a very large supply"
-      );
-    } else if (
-      top5Percentage > 50
-    ) {
-      redFlags.push(
-        "Top 5 holder concentration is high"
-      );
-    }
-
-    // Selling pressure
     if (
       buyPressure < 40 &&
       totalTrades > 0
@@ -570,56 +511,68 @@ export default async function handler(req, res) {
       );
     }
 
-    // Short-term selling
     if (
-      buyPressure5m < 35 &&
-      totalTrades5m >= 10
+      top1Percentage > 30
     ) {
       redFlags.push(
-        "Strong short-term selling pressure"
+        "Top holder controls over 30%"
+      );
+    } else if (
+      top1Percentage > 20
+    ) {
+      redFlags.push(
+        "Top holder concentration is elevated"
       );
     }
 
-    // Extreme price move
+    if (
+      top5Percentage > 65
+    ) {
+      redFlags.push(
+        "Top 5 holders control over 65%"
+      );
+    } else if (
+      top5Percentage > 50
+    ) {
+      redFlags.push(
+        "Top 5 holder concentration is high"
+      );
+    }
+
+    if (
+      volumeLiquidityRatio > 100
+    ) {
+      redFlags.push(
+        "Extreme volume/liquidity ratio"
+      );
+    }
+
     if (
       priceChange24h > 1500
     ) {
       redFlags.push(
-        "Extreme 24H price increase"
+        "Extreme price increase"
       );
     }
 
-    // Very high volume
     if (
-      volumeLiquidityRatio > 50
+      totalTrades < 50
     ) {
       redFlags.push(
-        "Unusually high volume relative to liquidity"
+        "Very low trading activity"
       );
     }
 
-    // Very new pair
-    if (
-      pairAgeMinutes !== null &&
-      pairAgeMinutes < 10
-    ) {
-      redFlags.push(
-        "Very new liquidity pair"
-      );
-    }
-
-    // =========================================
+    // ==================================================
     // SCORE
-    // =========================================
+    // ==================================================
 
     let score = 0;
 
     const analysis = [];
 
     // Liquidity: 20
-    if (
-      liquidity >= 100000
-    ) {
+    if (liquidity >= 100000) {
       score += 20;
       analysis.push(
         "Strong liquidity"
@@ -684,9 +637,7 @@ export default async function handler(req, res) {
     }
 
     // Buy pressure: 15
-    if (
-      buyPressure >= 60
-    ) {
+    if (buyPressure >= 60) {
       score += 15;
       analysis.push(
         "Strong buying pressure"
@@ -762,7 +713,7 @@ export default async function handler(req, res) {
       );
     }
 
-    // Top holder: 10
+    // Holder concentration
     if (
       top1Percentage <= 10
     ) {
@@ -790,7 +741,7 @@ export default async function handler(req, res) {
       );
     }
 
-    // Top 5: 10
+    // Top 5
     if (
       top5Percentage <= 30
     ) {
@@ -818,39 +769,43 @@ export default async function handler(req, res) {
       );
     }
 
-    // Holder distribution: 10
-    const uniqueOwners =
-      holders.length;
-
+    // Distribution
     if (
-      uniqueOwners >= 100
+      uniqueOwners >= 1000
     ) {
       score += 10;
+      analysis.push(
+        "Excellent holder distribution"
+      );
+    } else if (
+      uniqueOwners >= 500
+    ) {
+      score += 9;
       analysis.push(
         "Strong holder distribution"
       );
     } else if (
-      uniqueOwners >= 50
+      uniqueOwners >= 100
     ) {
-      score += 8;
+      score += 7;
       analysis.push(
         "Good holder distribution"
       );
     } else if (
-      uniqueOwners >= 20
+      uniqueOwners >= 50
     ) {
       score += 5;
       analysis.push(
-        "Limited holder data"
+        "Limited holder distribution"
       );
     } else {
       score += 2;
       analysis.push(
-        "⚠️ Limited holder data"
+        "⚠️ Very limited holder distribution"
       );
     }
 
-    // Trading activity: 10
+    // Trading activity
     if (
       totalTrades >= 2000
     ) {
@@ -881,14 +836,14 @@ export default async function handler(req, res) {
       );
     }
 
-    // =========================================
+    // ==================================================
     // RED FLAG PENALTY
-    // =========================================
+    // ==================================================
 
     score -=
       Math.min(
-        25,
-        redFlags.length * 4
+        redFlags.length * 3,
+        15
       );
 
     score =
@@ -900,17 +855,20 @@ export default async function handler(req, res) {
         )
       );
 
-    // =========================================
+    // ==================================================
     // VERDICT
-    // =========================================
+    // ==================================================
 
     let verdict;
 
-    if (
-      score >= 75
+    if (score >= 80) {
+      verdict =
+        "🟢 VERY STRONG";
+    } else if (
+      score >= 70
     ) {
       verdict =
-        "🟢 BUY / STRONG WATCH";
+        "🟢 STRONG WATCH";
     } else if (
       score >= 55
     ) {
@@ -926,33 +884,12 @@ export default async function handler(req, res) {
         "🔴 AVOID";
     }
 
-    // =========================================
-    // RISK LEVEL
-    // =========================================
-
-    let riskLevel;
-
-    if (
-      score >= 75
-    ) {
-      riskLevel = "LOWER";
-    } else if (
-      score >= 55
-    ) {
-      riskLevel = "MEDIUM";
-    } else if (
-      score >= 35
-    ) {
-      riskLevel = "HIGH";
-    } else {
-      riskLevel = "EXTREME";
-    }
-
-    // =========================================
+    // ==================================================
     // RESPONSE
-    // =========================================
+    // ==================================================
 
     return res.status(200).json({
+
       success: true,
 
       scannedAt,
@@ -966,22 +903,19 @@ export default async function handler(req, res) {
         address: token,
 
         name:
-          pair?.baseToken
-            ?.name || null,
+          pair?.baseToken?.name ||
+          null,
 
         symbol:
-          pair?.baseToken
-            ?.symbol || null
+          pair?.baseToken?.symbol ||
+          null
       },
 
       scanner: {
         score,
         verdict,
-        riskLevel,
         analysis,
-        redFlags,
-        redFlagCount:
-          redFlags.length
+        redFlags
       },
 
       market: {
@@ -989,25 +923,13 @@ export default async function handler(req, res) {
         marketCap,
         liquidityUsd:
           liquidity,
-
-        volume5m,
-        volume1h,
-        volume6h,
         volume24h,
-
-        priceChange5m,
-        priceChange1h,
-        priceChange6h,
         priceChange24h,
 
         volumeLiquidityRatio:
           Number(
-            volumeLiquidityRatio
-              .toFixed(2)
+            volumeLiquidityRatio.toFixed(2)
           ),
-
-        pairAgeMinutes,
-        pairAgeHours,
 
         dataSource:
           "DexScreener",
@@ -1022,47 +944,44 @@ export default async function handler(req, res) {
       },
 
       trading: {
-        buys5m,
-        sells5m,
-
         buys1h,
         sells1h,
-
-        buys6h,
-        sells6h,
-
-        buys24h,
-        sells24h,
-
         totalTrades,
-        totalTrades5m,
-
-        buyPressure,
-        buyPressure5m
+        buyPressure
       },
 
       holders: {
         supply,
 
+        decimals,
+
+        uniqueOwners,
+
         top1Percentage:
           Number(
-            top1Percentage
-              .toFixed(2)
+            top1Percentage.toFixed(2)
           ),
 
         top5Percentage:
           Number(
-            top5Percentage
-              .toFixed(2)
+            top5Percentage.toFixed(2)
           ),
 
         top10Percentage:
           Number(
-            top10Percentage
-              .toFixed(2)
+            top10Percentage.toFixed(2)
           ),
 
-        uniqueOwners,
+        top20Percentage:
+          Number(
+            top20Percentage.toFixed(2)
+          ),
+
+        whale10,
+
+        whale5,
+
+        distributionScore,
 
         accounts:
           holders
@@ -1085,18 +1004,56 @@ export default async function handler(req, res) {
                   holder.percentage
               })
             )
+      },
+
+      // Important:
+      // We do NOT falsely call the #1 holder
+      // the developer.
+      developer: {
+        detected: false,
+        status:
+          "Developer identification requires transaction-history analysis."
+      },
+
+      firstBuyers: {
+        detected: false,
+        status:
+          "First-buyer identification requires transaction-history analysis."
+      },
+
+      dataQuality: {
+        holderAccountsFetched:
+          allTokenAccounts.length,
+
+        holderPagesFetched:
+          page,
+
+        holderDataSource:
+          "Helius getTokenAccounts",
+
+        marketDataSource:
+          "DexScreener",
+
+        freshScan:
+          true
       }
+
     });
 
   } catch (error) {
+
+    console.error(
+      "SCAN ERROR:",
+      error
+    );
+
     return res.status(500).json({
+
       success: false,
 
       error:
-        String(
-          error?.message ||
-          error
-        ),
+        error?.message ||
+        String(error),
 
       scannedAt:
         Date.now()
