@@ -1,3 +1,6 @@
+const COOKIE_NAME = "scanner_auth";
+const SESSION_TTL = 60 * 60 * 24; // 24 hours
+
 export default async function handler(req, res) {
   try {
     if (req.method !== "POST") {
@@ -23,6 +26,27 @@ export default async function handler(req, res) {
         error: "Invalid password"
       });
     }
+
+    /*
+      Simple private access cookie.
+
+      HttpOnly:
+      JavaScript cannot read the cookie.
+
+      Secure:
+      Cookie is sent only over HTTPS.
+
+      SameSite=Strict:
+      Helps prevent cross-site requests.
+
+      Max-Age:
+      Login remains valid for 24 hours.
+    */
+
+    res.setHeader(
+      "Set-Cookie",
+      `${COOKIE_NAME}=authenticated; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=${SESSION_TTL}`
+    );
 
     return res.status(200).json({
       success: true
